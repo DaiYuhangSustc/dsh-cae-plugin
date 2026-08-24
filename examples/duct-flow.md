@@ -105,3 +105,7 @@ and centerline Umax/Umean = 0.0390439 / 0.02 = **1.95** vs the tabulated 2.10
 (−7.0%, within the ±10% gate) — exactly the assertion
 pytest/test_cfd_pipeline.py makes: the pipeline is answering the physics question
 the user actually asked.
+
+A full derivation-and-verification walkthrough of this case (theory,
+mesh, solver settings, and the checks above) is in
+[square_duct_laminar_tutorial.pdf](square_duct_laminar_tutorial.pdf).

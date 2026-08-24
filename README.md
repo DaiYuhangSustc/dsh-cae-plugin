@@ -1,5 +1,7 @@
 # dsh-cae
 
+**English** | [中文](README.zh.md)
+
 Natural-language-driven CAE pipeline for DeepSeek Harness: the agent takes a plain-language simulation request and drives a complete CAD → mesh → solve → post-process chain over build123d, Gmsh, CalculiX, OpenFOAM, and PyVista.
 Six tools cover the chain end to end — geometry construction, tetrahedral meshing, linear static solving, result extraction/plotting, and a parallel CFD chain (blockMesh → steady incompressible solve → post) for internal-flow requests — with receipts (paths, volumes, mesh quality, field extremes) fed back to the model after every stage.
 

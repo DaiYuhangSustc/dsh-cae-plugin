@@ -1,5 +1,7 @@
 # dsh-cae
 
+[English](README.md) | **中文**
+
 DeepSeek Harness 的自然语言驱动 CAE 流水线：agent 接收一句自然语言的仿真请求，驱动完整的 CAD → 网格 → 求解 → 后处理链路，底层依托 build123d、Gmsh、CalculiX、OpenFOAM 与 PyVista。
 六个工具覆盖全链路 —— 几何构建、四面体网格划分、线性静力求解、结果提取与绘图，外加一条并行 CFD 链路（blockMesh → 稳态不可压缩求解 → 后处理）处理内流请求 —— 每个阶段结束后将回执（路径、体积、网格质量、场极值）反馈给模型。
 
