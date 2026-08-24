@@ -1,0 +1,7 @@
+- insert:
+    - id: cae
+      name: dsh-cae
+      config:
+        python: python3
+        workdir: ./cae
+        stageTimeoutMs: 600000

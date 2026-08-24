@@ -1,0 +1,7 @@
+node_modules/
+lib/
+cae*/
+*.log
+.DS_Store
+__pycache__/
+*.py[cod]

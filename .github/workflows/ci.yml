@@ -1,0 +1,31 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PYVISTA_OFF_SCREEN: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: sudo apt-get update && sudo apt-get install -y calculix-ccx libgl1
+      - name: Install OpenFOAM (best effort; cfd tests self-skip)
+        continue-on-error: true
+        run: |
+          wget -qO- https://dl.openfoam.org/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/openfoam.gpg
+          echo "deb [signed-by=/usr/share/keyrings/openfoam.gpg] http://dl.openfoam.org/ubuntu noble main" | sudo tee /etc/apt/sources.list.d/openfoam.list
+          sudo apt-get update && sudo apt-get install -y openfoam13
+      - run: pip install build123d gmsh pyvista ccx2paraview pytest
+      - run: pnpm install
+      - run: pnpm build
+      - run: pnpm vitest run
+      # The pytest/ directory shadows the pytest package under `python -m pytest`
+      # from the repo root; the console script resolves correctly.
+      - run: pytest pytest -v
