@@ -6,6 +6,11 @@
 
 **English** | [中文](README.zh.md)
 
+[![ci](https://github.com/DaiYuhangSustc/dsh-cae-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/DaiYuhangSustc/dsh-cae-plugin/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/github/license/DaiYuhangSustc/dsh-cae-plugin)](LICENSE)
+![commit-activity](https://img.shields.io/github/commit-activity/m/DaiYuhangSustc/dsh-cae-plugin)
+![last-commit](https://img.shields.io/github/last-commit/DaiYuhangSustc/dsh-cae-plugin)
+
 </div>
 
 Natural-language-driven CAE pipeline for DeepSeek Harness: the agent takes a plain-language simulation request and drives a complete CAD → mesh → solve → post-process chain over build123d, Gmsh, CalculiX, OpenFOAM, and PyVista.

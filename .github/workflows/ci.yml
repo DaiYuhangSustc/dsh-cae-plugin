@@ -1,6 +1,6 @@
 name: ci
 on:
-  push: { branches: [main] }
+  push: { branches: [master] }
   pull_request:
 jobs:
   test:

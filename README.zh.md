@@ -6,6 +6,11 @@
 
 [English](README.md) | **中文**
 
+[![ci](https://github.com/DaiYuhangSustc/dsh-cae-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/DaiYuhangSustc/dsh-cae-plugin/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/github/license/DaiYuhangSustc/dsh-cae-plugin)](LICENSE)
+![commit-activity](https://img.shields.io/github/commit-activity/m/DaiYuhangSustc/dsh-cae-plugin)
+![last-commit](https://img.shields.io/github/last-commit/DaiYuhangSustc/dsh-cae-plugin)
+
 </div>
 
 DeepSeek Harness 的自然语言驱动 CAE 流水线：agent 接收一句自然语言的仿真请求，驱动完整的 CAD → 网格 → 求解 → 后处理链路，底层依托 build123d、Gmsh、CalculiX、OpenFOAM 与 PyVista。
