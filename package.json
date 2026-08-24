@@ -2,7 +2,7 @@
   "name": "dsh-cae",
   "version": "0.2.0",
   "type": "module",
-  "description": "DeepSeek Harness bundle: natural-language-driven CAE pipeline (CAD → mesh → solve → post-process; CFD via OpenFOAM)",
+  "description": "Mochi — natural-language-driven CAE bundle for DeepSeek Harness (CAD → mesh → solve → post-process; CFD via OpenFOAM)",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -27,6 +27,7 @@
   "keywords": [
     "dsh-plugin",
     "deepseek-harness",
+    "mochi",
     "cae",
     "fea",
     "cad",

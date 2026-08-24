@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 240" role="img" aria-label="Mochi — natural-language CAE">
+  <!-- Mochi horizontal lockup: badge mascot + wordmark. Mascot markup mirrors assets/icon.svg (keep the two in sync). -->
+  <circle cx="120" cy="120" r="110" fill="#FFF4ED" stroke="#F7DCCB" stroke-width="4"/>
+  <ellipse cx="125" cy="207" rx="62" ry="9" fill="#F2DCCE" opacity="0.55"/>
+  <path d="M184 142 C 206 132, 213 112, 200 100 C 193 94, 184 100, 189 109"
+        fill="none" stroke="#E89FB5" stroke-width="5" stroke-linecap="round"/>
+  <rect x="122" y="158" width="14" height="42" rx="7" fill="#F3EBE2" stroke="#DCD2C7" stroke-width="3"/>
+  <rect x="156" y="158" width="14" height="42" rx="7" fill="#F3EBE2" stroke="#DCD2C7" stroke-width="3"/>
+  <ellipse cx="129" cy="201" rx="10" ry="5.5" fill="#F3C9D6"/>
+  <ellipse cx="163" cy="201" rx="10" ry="5.5" fill="#F3C9D6"/>
+  <ellipse cx="138" cy="150" rx="50" ry="38" fill="#FFFFFF" stroke="#E3D9CF" stroke-width="4"/>
+  <rect x="104" y="162" width="15" height="40" rx="7.5" fill="#FFFFFF" stroke="#E3D9CF" stroke-width="3.5"/>
+  <rect x="170" y="162" width="15" height="40" rx="7.5" fill="#FFFFFF" stroke="#E3D9CF" stroke-width="3.5"/>
+  <ellipse cx="111.5" cy="203" rx="11" ry="6" fill="#F8C4D2" stroke="#EEA9BC" stroke-width="2"/>
+  <ellipse cx="177.5" cy="203" rx="11" ry="6" fill="#F8C4D2" stroke="#EEA9BC" stroke-width="2"/>
+  <path d="M88.5 131 L136 109.5 L141.5 120 L94 141.5 Z" fill="#F27E9F" stroke="#DE6488"
+        stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="90" cy="150" r="8" fill="#F5C86B" stroke="#E2A93F" stroke-width="2"/>
+  <circle cx="92" cy="92" r="42" fill="#FFFFFF" stroke="#E3D9CF" stroke-width="4"/>
+  <path d="M108 54
+           C 126 56, 140 62, 144 80
+           C 148 102, 142 120, 128 126
+           C 118 130, 110 122, 112 110
+           C 118 98, 118 76, 112 64
+           C 110 60, 109 57, 108 54 Z"
+        fill="#FFFFFF" stroke="#E3D9CF" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M112 62
+           C 124 62, 134 68, 137 84
+           C 139 100, 134 112, 125 114
+           C 131 98, 130 80, 122 70
+           C 119 66, 115 64, 112 62 Z" fill="#F8C4D2"/>
+  <ellipse cx="52" cy="100" rx="28" ry="19" fill="#FFFFFF" stroke="#E3D9CF" stroke-width="4"/>
+  <ellipse cx="30" cy="96" rx="11" ry="8.5" fill="#F06D9A"/>
+  <circle cx="27" cy="93" r="2.5" fill="#FFFFFF" opacity="0.55"/>
+  <path d="M40 112 Q 52 120 64 112" fill="none" stroke="#DA8FA2" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 115 Q 58 133 67 115 Z" fill="#F78BA9"/>
+  <circle cx="84" cy="84" r="5" fill="#3A3A3F"/>
+  <circle cx="86" cy="82" r="1.6" fill="#FFFFFF"/>
+  <circle cx="84" cy="84" r="13" fill="none" stroke="#5B6B7C" stroke-width="3.2"/>
+  <path d="M97 80 L 112 75" stroke="#5B6B7C" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="103" cy="107" rx="8" ry="5" fill="#F9B8C6" opacity="0.75"/>
+
+  <!-- wordmark -->
+  <text x="252" y="140" font-family="'Baloo 2','Quicksand','Segoe UI Rounded','PingFang SC','Microsoft YaHei',sans-serif"
+        font-size="84" font-weight="700" fill="#4B4B57">Mochi</text>
+  <text x="255" y="174" font-family="'Quicksand','Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+        font-size="22" letter-spacing="1.5" fill="#9C948B">natural-language CAE</text>
+</svg>
