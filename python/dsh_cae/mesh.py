@@ -85,15 +85,25 @@ def main() -> None:
             for group in etags:
                 element_count += len(group)
         min_jacobian = _min_sj(gmsh)
+        connectivity = _connectivity(gmsh)
 
         gmsh.write(args.msh)
-        emit({
+        receipt = {
             "mshPath": args.msh,
             "nodeCount": len(node_tags),
             "elementCount": element_count,
             "groupNames": group_names,
             "quality": {"minJacobian": min_jacobian},
-        })
+            "connectivity": connectivity,
+        }
+        if connectivity["components"] > 1:
+            receipt["warnings"] = [
+                f"mesh has {connectivity['components']} disconnected components "
+                f"({connectivity['isolatedElements']} of {connectivity['totalElements']} "
+                f"elements outside the largest one); a downstream static solve will be "
+                f"singular unless every component is constrained or tied"
+            ]
+        emit(receipt)
     finally:
         gmsh.finalize()
 
@@ -118,6 +128,47 @@ def _min_sj(gmsh):
         return min(values) if values else None
     except (AttributeError, TypeError, RuntimeError):
         return None
+
+
+def _connectivity(gmsh):
+    """Node-sharing components among volume elements; more than one means
+    floating solids and a singular downstream static solve."""
+    parent: dict[int, int] = {}
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]  # path halving
+            x = parent[x]
+        return x
+
+    reps: list[int] = []  # one node per element; rooted only after all unions
+    total = 0
+    for _dim, tag in gmsh.model.getEntities(3):
+        types, etags, enodes = gmsh.model.mesh.getElements(3, tag)
+        for etype, tags, nodes in zip(types, etags, enodes):
+            width = len(nodes) // len(tags)
+            corners = 4 if int(etype) == 11 else width  # tet10: 4 corners, then 6 mid-edge
+            for k in range(len(tags)):
+                conn = [int(n) for n in nodes[k * width:k * width + corners]]
+                for n in conn:
+                    parent.setdefault(n, n)
+                for n in conn[1:]:
+                    ra, rb = find(conn[0]), find(n)
+                    if ra != rb:
+                        parent[rb] = ra
+                reps.append(conn[0])
+                total += 1
+    if total == 0:
+        return {"components": 0, "totalElements": 0, "isolatedElements": 0}
+    sizes: dict[int, int] = {}
+    for node in reps:
+        root = find(node)
+        sizes[root] = sizes.get(root, 0) + 1
+    return {
+        "components": len(sizes),
+        "totalElements": total,
+        "isolatedElements": total - max(sizes.values()),
+    }
 
 
 if __name__ == "__main__":

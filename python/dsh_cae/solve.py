@@ -56,7 +56,18 @@ def main() -> None:
     parser.add_argument("--load-group", action="append", default=[])
     parser.add_argument("--load-n", action="append", default=[])
     parser.add_argument("--script-file")
-    args = parser.parse_args()
+    # argparse 会把 "-15733,6808,-12000" 这类负值载荷误当选项；预先改写为 --load-n=... 形式
+    argv: list[str] = []
+    i = 0
+    raw = sys.argv[1:]
+    while i < len(raw):
+        if raw[i] == "--load-n" and i + 1 < len(raw):
+            argv.append(f"--load-n={raw[i + 1]}")
+            i += 2
+        else:
+            argv.append(raw[i])
+            i += 1
+    args = parser.parse_args(argv)
 
     try:
         import gmsh
@@ -110,7 +121,8 @@ def main() -> None:
                 lines.append(handle.read().strip())
 
         lines.append("*STEP")
-        lines.append("*STATIC")
+        # 本机 SPOOLES 对中大模型会静默崩溃（exit 255），迭代求解器更稳
+        lines.append("*STATIC, SOLVER=ITERATIVE SCALING")
         for _name, (fx, fy, fz), nodes in loads:
             per_node = len(nodes) or 1
             for n in nodes:

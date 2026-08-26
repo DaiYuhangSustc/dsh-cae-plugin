@@ -1,3 +1,4 @@
+import re
 import shutil
 import subprocess
 
@@ -28,6 +29,28 @@ def test_solve_cantilever_runs_and_converts(stage, workdir, parse_receipt):
     assert (workdir / "case.frd").exists()
     assert receipt["vtuPath"] is not None
     assert len(receipt["logTail"]) > 0
+    # SPOOLES silently crashes (exit 255) on medium models; pin the iterative solver.
+    assert "*STATIC, SOLVER=ITERATIVE SCALING" in (workdir / "case.inp").read_text()
+
+
+def test_solve_accepts_negative_load_components(stage, workdir, parse_receipt):
+    # argparse used to eat "-15733,6808,-12000" as an option flag, making any
+    # load with negative components impossible to express.
+    step, faces = _build(workdir, stage)
+    msh = workdir / "beam.msh"
+    stage(workdir, "mesh", "--step", str(step), "--faces-json", str(faces),
+          "--msh", str(msh), "--element-size", "4.0")
+    proc = stage(workdir, "solve", "--msh", str(msh), "--case", "negload",
+                 "--young-mpa", "210000", "--poisson", "0.3",
+                 "--fixed-group", "fixed", "--load-group", "load",
+                 "--load-n", "-15733,6808,-12000")
+    receipt = parse_receipt(proc)
+    assert receipt["exitCode"] == 0
+    inp = (workdir / "negload.inp").read_text()
+    # the per-node split rescales the magnitudes, so pin the sign per direction
+    assert re.search(r"^\d+, 1, -\d", inp, re.M)
+    assert re.search(r"^\d+, 2, \d", inp, re.M)
+    assert re.search(r"^\d+, 3, -\d", inp, re.M)
 
 
 def test_solve_reports_domain_failure_without_throwing(stage, workdir, parse_receipt):

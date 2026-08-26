@@ -5,3 +5,6 @@ cae*/
 .DS_Store
 __pycache__/
 *.py[cod]
+
+# local workflow case sessions (private, never upload)
+dsh_case/

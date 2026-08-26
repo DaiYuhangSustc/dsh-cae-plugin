@@ -8,6 +8,11 @@ pytest.importorskip("gmsh")
 
 from test_cad import CANTILEVER  # noqa: F401 - reuse the model script
 
+TWO_DISJOINT_BOXES = """
+from build123d import Box
+part = Box(30, 30, 30) + Box(30, 30, 30).translate((100, 0, 0))
+"""
+
 
 def _build(workdir, stage):
     script = workdir / "beam.cad.py"
@@ -30,6 +35,26 @@ def test_mesh_creates_named_groups(stage, workdir, parse_receipt):
     assert receipt["nodeCount"] > 100
     assert receipt["elementCount"] > 50
     assert receipt["quality"]["minJacobian"] is None or receipt["quality"]["minJacobian"] > 0.0
+    assert receipt["connectivity"]["components"] == 1
+    assert receipt["connectivity"]["isolatedElements"] == 0
+    assert "warnings" not in receipt
+
+
+def test_mesh_counts_disconnected_components(stage, workdir, parse_receipt):
+    # A singular system (floating solids) must be flagged at mesh time, not
+    # discovered as a solver that never converges.
+    script = workdir / "twobox.cad.py"
+    script.write_text(TWO_DISJOINT_BOXES)
+    step = workdir / "twobox.step"
+    proc = stage(workdir, "cad", "--script-file", str(script), "--step", str(step))
+    assert "<<<DSH_CAE_JSON>>>" in proc.stdout
+    msh = workdir / "twobox.msh"
+    proc = stage(workdir, "mesh", "--step", str(step), "--msh", str(msh), "--element-size", "6.0")
+    receipt = parse_receipt(proc)
+    assert receipt["connectivity"]["components"] == 2
+    assert receipt["connectivity"]["totalElements"] == receipt["elementCount"]
+    assert receipt["connectivity"]["isolatedElements"] > 0
+    assert any("disconnected" in w for w in receipt["warnings"])
 
 
 def test_mesh_fails_loud_when_no_face_matches(stage, workdir):

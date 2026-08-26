@@ -12,17 +12,37 @@ PY_DEPS = ["build123d", "gmsh", "pyvista", "ccx2paraview"]
 FOAM_UTILS = ["blockMesh", "checkMesh", "foamRun", "foamToVTK"]
 
 
-def check_structural() -> list[str]:
+def check_structural() -> tuple[list[str], dict]:
+    """Probe python imports and ccx; return (missing, diagnostics).
+
+    Diagnostics answer the two questions every real failure raised so far:
+    WHICH interpreter ran the check, and WHY each import actually failed
+    (e.g. a poisoned LD_LIBRARY_PATH surfaces as a pyexpat symbol error, not
+    as a missing package).
+    """
+    import sys
     missing: list[str] = []
+    details: dict[str, str] = {}
     for mod in PY_DEPS:
         try:
             __import__(mod)
-        except ImportError:
+        except ImportError as exc:
             missing.append(mod)
+            details[mod] = f"{type(exc).__name__}: {exc}"
+        except Exception as exc:  # noqa: BLE001 - broken installs fail elsewhere in the chain
+            missing.append(mod)
+            details[mod] = f"{type(exc).__name__}: {exc}"
     import shutil
-    if shutil.which("ccx") is None:
+    ccx_path = shutil.which("ccx")
+    if ccx_path is None:
         missing.append("ccx (CalculiX binary)")
-    return missing
+    diag = {
+        "python": sys.executable,
+        "pythonVersion": sys.version.split()[0],
+        "ccxPath": ccx_path,
+        "importErrors": details,
+    }
+    return missing, diag
 
 
 def check_cfd(bashrc_arg: str | None) -> list[str]:
@@ -48,8 +68,12 @@ def main() -> None:
     parser.add_argument("--group", choices=["structural", "cfd"], default="structural")
     parser.add_argument("--bashrc")
     args = parser.parse_args()
-    missing = check_structural() if args.group == "structural" else check_cfd(args.bashrc)
-    emit({"ok": not missing, "missing": missing, "group": args.group})
+    if args.group == "structural":
+        missing, diag = check_structural()
+        emit({"ok": not missing, "missing": missing, "group": args.group, "diagnostics": diag})
+    else:
+        missing = check_cfd(args.bashrc)
+        emit({"ok": not missing, "missing": missing, "group": args.group})
 
 
 if __name__ == "__main__":
