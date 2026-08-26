@@ -11,6 +11,10 @@
 ![commit-activity](https://img.shields.io/github/commit-activity/m/DaiYuhangSustc/dsh-cae-plugin)
 ![last-commit](https://img.shields.io/github/last-commit/DaiYuhangSustc/dsh-cae-plugin)
 
+**WeChat Official Account** · plugin tutorials and usage articles, published every so often
+
+<img src="assets/qrcode.jpg" alt="WeChat official account QR code" width="150">
+
 </div>
 
 Natural-language-driven CAE pipeline for DeepSeek Harness: the agent takes a plain-language simulation request and drives a complete CAD → mesh → solve → post-process chain over build123d, Gmsh, CalculiX, OpenFOAM, and PyVista.

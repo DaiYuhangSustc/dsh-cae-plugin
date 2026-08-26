@@ -11,6 +11,10 @@
 ![commit-activity](https://img.shields.io/github/commit-activity/m/DaiYuhangSustc/dsh-cae-plugin)
 ![last-commit](https://img.shields.io/github/last-commit/DaiYuhangSustc/dsh-cae-plugin)
 
+**微信公众号** · 不定期推送插件使用文章
+
+<img src="assets/qrcode.jpg" alt="微信公众号二维码" width="150">
+
 </div>
 
 DeepSeek Harness 的自然语言驱动 CAE 流水线：agent 接收一句自然语言的仿真请求，驱动完整的 CAD → 网格 → 求解 → 后处理链路，底层依托 build123d、Gmsh、CalculiX、OpenFOAM 与 PyVista。
