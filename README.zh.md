@@ -63,14 +63,14 @@ CFD 链路在 `cae_cfd_mesh` 处按 mm 接收几何（一次性换算为 m），
 
 | 字段 | 默认值 | 含义 |
 | --- | --- | --- |
-| `python` | `python3` | 已安装 build123d/gmsh/pyvista/ccx2paraview 的解释器（CalculiX `ccx` 在 PATH 上） |
+| `python` | `auto` | `'auto'` 自动探测名为 `dsh-cae` 的 conda 环境（`$CONDA_PREFIX`、`$CONDA_ENVS_PATH`、`~/.conda`、`~/miniconda3`、`~/anaconda3`、`~/mambaforge`、`/opt/conda`），找不到再回退 `python3`；也可显式指定解释器路径 |
 | `workdir` | `./cae` | 工件目录（相对 agent cwd），存放 STEP/MSH/INP/FRD/VTU/PNG 文件 |
 | `stageTimeoutMs` | `600000` | 每阶段墙钟预算（毫秒）；超时则终止阶段进程组 |
 | `openfoamBashrc` | 自动探测 | OpenFOAM `etc/bashrc` 路径；自动探测检查 `$FOAM_BASHRC`、`/opt/openfoam*/etc/bashrc`、`/usr/lib/openfoam/*/etc/bashrc` |
 
 ## 故障排查
 
-若 `import build123d` 报 `pyexpat ... undefined symbol: XML_SetAllocTrackerActivationThreshold`，是 OCP 轮子自带了比解释器更旧的 libexpat：用 `LD_PRELOAD` 指向本环境的 `lib/libexpat.so.1`（例如 `LD_PRELOAD=$CONDA_PREFIX/lib/libexpat.so.1`）优先加载新版即可。
+若 `import build123d` 报 `pyexpat ... undefined symbol: XML_SetAllocTrackerActivationThreshold`，是被继承的 `LD_LIBRARY_PATH`（如 OpenFOAM 的 bashrc 把 `/usr/lib` 目录排在了前面）遮蔽了解释器自带的更新版 libexpat。对 conda 风格解释器（`python: auto` 或显式 env 路径），runner 在 spawn 时已自动把该环境的 `lib` 前置到 `LD_LIBRARY_PATH`、`bin` 前置到 `PATH`；其他布局请自行 `LD_PRELOAD=$CONDA_PREFIX/lib/libexpat.so.1` 强制优先加载新版。
 无显示器的 Linux 服务器需要 EGL 或 OSMesa 才能进行 PyVista 渲染 —— 推荐使用 conda 的 vtk，其构建支持 OSMesa：`conda install -c conda-forge vtk osmesa`；CI 设置 `PYVISTA_OFF_SCREEN=true`，此时 vtk 无需 X 即可离屏渲染。
 OpenFOAM 11+（Foundation）移除了独立求解器可执行文件：本插件运行 `foamRun`（`solver incompressibleFluid`），即 simpleFoam 的后继者；ESI 版本仍保留 `simpleFoam`，但此处调用的名称是 Foundation 的。`foamToVTK` 输出传统 `.vtk`，`cae_post_process` 直接读取。
 
@@ -97,6 +97,8 @@ conda create -n dsh-cae -c conda-forge python=3.11 calculix -y
 conda run -n dsh-cae python -m ensurepip --upgrade
 conda run -n dsh-cae pip install build123d gmsh pyvista ccx2paraview pytest
 ```
+
+环境名就是关键：默认的 `python: auto` 探测的正是名为 `dsh-cae` 的 conda 环境，因此建好后无需任何额外配置。
 
 按改动所属的层选跑对应测试：
 

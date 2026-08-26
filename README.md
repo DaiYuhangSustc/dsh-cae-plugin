@@ -63,14 +63,14 @@ The CFD chain takes geometry in mm at `cae_cfd_mesh` (converted to m once) and i
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `python` | `python3` | Interpreter with build123d/gmsh/pyvista/ccx2paraview importable (CalculiX `ccx` on PATH) |
+| `python` | `auto` | `'auto'` probes a conda env named `dsh-cae` (`$CONDA_PREFIX`, `$CONDA_ENVS_PATH`, `~/.conda`, `~/miniconda3`, `~/anaconda3`, `~/mambaforge`, `/opt/conda`), falling back to `python3`; or set an explicit interpreter path |
 | `workdir` | `./cae` | Artifact directory (relative to agent cwd) for STEP/MSH/INP/FRD/VTU/PNG files |
 | `stageTimeoutMs` | `600000` | Per-stage wall-clock budget in ms; exceeded kills the stage process group |
 | `openfoamBashrc` | auto-detect | OpenFOAM `etc/bashrc` path; auto-detection checks `$FOAM_BASHRC`, `/opt/openfoam*/etc/bashrc`, `/usr/lib/openfoam/*/etc/bashrc` |
 
 ## Troubleshooting
 
-If `import build123d` dies with `pyexpat ... undefined symbol: XML_SetAllocTrackerActivationThreshold`, the OCP wheel loaded an older bundled libexpat than your interpreter's: start Python with `LD_PRELOAD=$(python -c 'import sysconfig; print(sysconfig.get_paths()["stdlib"])')/../../lib/libexpat.so.1` (or your env's libexpat path) to force the newer one first.
+If `import build123d` dies with `pyexpat ... undefined symbol: XML_SetAllocTrackerActivationThreshold`, an inherited `LD_LIBRARY_PATH` (e.g. OpenFOAM's bashrc listing `/usr/lib` dirs) is shadowing the interpreter's own newer libexpat. For a conda-style interpreter — `python: auto` or an explicit env path — the runner already prepends the env's `lib` to `LD_LIBRARY_PATH` and its `bin` to `PATH` at spawn time; for other layouts force the newer one first yourself: `LD_PRELOAD=$CONDA_PREFIX/lib/libexpat.so.1`.
 Linux servers without a display need EGL or OSMesa for PyVista rendering — prefer conda's vtk, which ships an OSMesa-capable build via `conda install -c conda-forge vtk osmesa`; CI sets `PYVISTA_OFF_SCREEN=true`, under which vtk renders off-screen without X.
 OpenFOAM 11+ (Foundation) replaced standalone solvers: this plugin runs `foamRun` (`solver incompressibleFluid`), the simpleFoam successor; ESI releases keep `simpleFoam` but the invoked names here are Foundation's. `foamToVTK` writes legacy `.vtk`, which `cae_post_process` reads directly.
 
@@ -97,6 +97,8 @@ conda create -n dsh-cae -c conda-forge python=3.11 calculix -y
 conda run -n dsh-cae python -m ensurepip --upgrade
 conda run -n dsh-cae pip install build123d gmsh pyvista ccx2paraview pytest
 ```
+
+The env name matters: the default `python: auto` probes for a conda env named exactly `dsh-cae`, so this env needs no further configuration.
 
 Run the suite that matches your change:
 

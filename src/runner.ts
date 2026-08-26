@@ -1,8 +1,10 @@
 import { spawn } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import type { Config } from './config.js'
+import { INSTALL_HINTS, depsFailureMessage, pythonFor, stageEnv } from './interpreter.js'
+
+export { pythonDir } from './interpreter.js'
 
 /** Marker line preceding the stage receipt on stdout. */
 export const RECEIPT_MARK = '<<<DSH_CAE_JSON>>>'
@@ -10,16 +12,6 @@ export const RECEIPT_MARK = '<<<DSH_CAE_JSON>>>'
 const TAIL_BYTES = 8192
 /** Grace period between SIGTERM and SIGKILL of the stage process group. */
 const KILL_GRACE_MS = 2000
-
-/**
- * Absolute path of the shipped `python/` directory. Resolves identically from
- * `src/` (tsx source launch) and `lib/` (built install) because both sit one
- * level below the package root.
- * @returns directory containing the `dsh_cae` package.
- */
-export function pythonDir(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), '..', 'python')
-}
 
 /** Successful stage outcome: parsed receipt plus the persisted full log. */
 export interface StageOutcome {
@@ -52,11 +44,11 @@ export async function runStage(
   const workdir = resolve(config.workdir)
   await mkdir(workdir, { recursive: true })
   const logPath = resolve(workdir, opts.logFile)
-  const pythonPath = [pythonDir(), process.env.PYTHONPATH].filter(Boolean).join(':')
-  const proc = spawn(config.python, ['-m', `dsh_cae.${stage}`, ...args], {
+  const python = pythonFor(config)
+  const proc = spawn(python, ['-m', `dsh_cae.${stage}`, ...args], {
     cwd: workdir,
     detached: true,
-    env: { ...process.env, PYTHONPATH: pythonPath },
+    env: stageEnv(python, process.env),
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 
@@ -116,13 +108,6 @@ export type DepsGroup = 'structural' | 'cfd'
 /** Cached verdicts of the interpreter dependency self-check, per group. */
 const depsOk = new WeakMap<Config, Set<DepsGroup>>()
 
-const STRUCTURAL_HINT =
-  'Install with:\n  pip install build123d gmsh pyvista ccx2paraview\n'
-  + '  conda install -c conda-forge calculix  # or: sudo apt install calculix-ccx'
-const CFD_HINT =
-  'Install OpenFOAM (https://openfoam.org/download), or point openfoamBashrc/FOAM_BASHRC '
-  + 'at an existing etc/bashrc (auto-checked: /opt/openfoam*/etc/bashrc, /usr/lib/openfoam/*/etc/bashrc).'
-
 /**
  * Verify once per config object and group that the stage dependencies are
  * present; throws with the exact install hint on the first missing set.
@@ -142,15 +127,12 @@ export async function ensureDeps(
     signal, logFile: `deps.${group}.log`,
   }).catch((error: Error) => {
     throw new Error(
-      `dsh-cae cannot start its Python stages with interpreter '${config.python}': `
-      + `${error.message}\n${group === 'cfd' ? CFD_HINT : STRUCTURAL_HINT}`,
+      `dsh-cae cannot start its Python stages with interpreter '${pythonFor(config)}': `
+      + `${error.message}\n${INSTALL_HINTS[group]}`,
     )
   })
   if (receipt.ok !== true) {
-    throw new Error(
-      `dsh-cae ${group} dependencies are incomplete (missing: ${JSON.stringify(receipt.missing ?? [])}).\n`
-      + (group === 'cfd' ? CFD_HINT : STRUCTURAL_HINT),
-    )
+    throw new Error(depsFailureMessage(group, receipt))
   }
   seen.add(group)
 }
