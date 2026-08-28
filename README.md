@@ -22,6 +22,14 @@ Six tools cover the chain end to end — geometry construction, tetrahedral mesh
 
 ## Install
 
+Recommended (Docker): install Docker, add the plugin, and point `python` at the prebuilt image — no conda, no apt CalculiX, no OpenFOAM install. The image is pulled automatically on first use (~3–4 GB):
+
+```yaml
+python: docker://ghcr.io/daiyuhangsustc/dsh-cae:latest
+```
+
+Local interpreter (no Docker): the routes below.
+
 Python stack first: `pip install build123d gmsh pyvista ccx2paraview`, plus a CalculiX solver — `sudo apt install calculix-ccx` on Debian/Ubuntu or `conda install -c conda-forge calculix` elsewhere (the `ccx` binary must be on PATH).
 For the CFD chain, OpenFOAM (Foundation v11–13 or ESI) must be installed; its `etc/bashrc` is auto-detected (`$FOAM_BASHRC`, `/opt/openfoam*`, `/usr/lib/openfoam*`) or set via `openfoamBashrc`.
 Then load the plugin into a profile — run `dsh` from a DeepSeek Harness checkout:
@@ -67,7 +75,7 @@ The CFD chain takes geometry in mm at `cae_cfd_mesh` (converted to m once) and i
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `python` | `auto` | `'auto'` probes a conda env named `dsh-cae` (`$CONDA_PREFIX`, `$CONDA_ENVS_PATH`, `~/.conda`, `~/miniconda3`, `~/anaconda3`, `~/mambaforge`, `/opt/conda`), falling back to `python3`; or set an explicit interpreter path |
+| `python` | `auto` | `'auto'` probes a conda env named `dsh-cae` (`$CONDA_PREFIX`, `$CONDA_ENVS_PATH`, `~/.conda`, `~/miniconda3`, `~/anaconda3`, `~/mambaforge`, `/opt/conda`), falling back to `python3`; or set an explicit interpreter path; or `docker://<image-ref>` to run every stage in a container — recommended image `ghcr.io/daiyuhangsustc/dsh-cae` (auto-pulled on first use) |
 | `workdir` | `./cae` | Artifact directory (relative to agent cwd) for STEP/MSH/INP/FRD/VTU/PNG files |
 | `stageTimeoutMs` | `600000` | Per-stage wall-clock budget in ms; exceeded kills the stage process group |
 | `openfoamBashrc` | auto-detect | OpenFOAM `etc/bashrc` path; auto-detection checks `$FOAM_BASHRC`, `/opt/openfoam*/etc/bashrc`, `/usr/lib/openfoam/*/etc/bashrc` |
@@ -77,6 +85,7 @@ The CFD chain takes geometry in mm at `cae_cfd_mesh` (converted to m once) and i
 If `import build123d` dies with `pyexpat ... undefined symbol: XML_SetAllocTrackerActivationThreshold`, an inherited `LD_LIBRARY_PATH` (e.g. OpenFOAM's bashrc listing `/usr/lib` dirs) is shadowing the interpreter's own newer libexpat. For a conda-style interpreter — `python: auto` or an explicit env path — the runner already prepends the env's `lib` to `LD_LIBRARY_PATH` and its `bin` to `PATH` at spawn time; for other layouts force the newer one first yourself: `LD_PRELOAD=$CONDA_PREFIX/lib/libexpat.so.1`.
 Linux servers without a display need EGL or OSMesa for PyVista rendering — prefer conda's vtk, which ships an OSMesa-capable build via `conda install -c conda-forge vtk osmesa`; CI sets `PYVISTA_OFF_SCREEN=true`, under which vtk renders off-screen without X.
 OpenFOAM 11+ (Foundation) replaced standalone solvers: this plugin runs `foamRun` (`solver incompressibleFluid`), the simpleFoam successor; ESI releases keep `simpleFoam` but the invoked names here are Foundation's. `foamToVTK` writes legacy `.vtk`, which `cae_post_process` reads directly.
+Docker route errors are explicit: "Docker is not installed" → install Docker; "daemon is not running" → `sudo systemctl start docker`; "failed to pull" → run the printed `docker pull` by hand. A stale image behaves like stale dependencies — `docker pull ghcr.io/daiyuhangsustc/dsh-cae:latest` to refresh.
 
 ## Limitations
 

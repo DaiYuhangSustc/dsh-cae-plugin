@@ -22,6 +22,14 @@ DeepSeek Harness 的自然语言驱动 CAE 流水线：agent 接收一句自然�
 
 ## 安装
 
+推荐（Docker）：装好 Docker、添加插件、把 `python` 指向预构建镜像——不需要 conda、apt 装 CalculiX、也不需要装 OpenFOAM。镜像在首次使用时自动拉取（约 3–4 GB）：
+
+```yaml
+python: docker://ghcr.io/daiyuhangsustc/dsh-cae:latest
+```
+
+本地解释器（无 Docker）：见下方路线。
+
 先装 Python 栈：`pip install build123d gmsh pyvista ccx2paraview`，再装 CalculiX 求解器 —— Debian/Ubuntu 上 `sudo apt install calculix-ccx`，其他平台 `conda install -c conda-forge calculix`（`ccx` 必须在 PATH 上）。
 CFD 链路需要安装 OpenFOAM（Foundation v11–13 或 ESI）；其 `etc/bashrc` 会被自动探测（`$FOAM_BASHRC`、`/opt/openfoam*`、`/usr/lib/openfoam*`），也可通过 `openfoamBashrc` 指定。
 然后把插件装入 profile —— 在 DeepSeek Harness 检出里运行 `dsh`：
@@ -67,7 +75,7 @@ CFD 链路在 `cae_cfd_mesh` 处按 mm 接收几何（一次性换算为 m），
 
 | 字段 | 默认值 | 含义 |
 | --- | --- | --- |
-| `python` | `auto` | `'auto'` 自动探测名为 `dsh-cae` 的 conda 环境（`$CONDA_PREFIX`、`$CONDA_ENVS_PATH`、`~/.conda`、`~/miniconda3`、`~/anaconda3`、`~/mambaforge`、`/opt/conda`），找不到再回退 `python3`；也可显式指定解释器路径 |
+| `python` | `auto` | `'auto'` 自动探测名为 `dsh-cae` 的 conda 环境（`$CONDA_PREFIX`、`$CONDA_ENVS_PATH`、`~/.conda`、`~/miniconda3`、`~/anaconda3`、`~/mambaforge`、`/opt/conda`），找不到再回退 `python3`；也可显式指定解释器路径；或 `docker://<镜像引用>` 让所有阶段在容器中运行——推荐镜像 `ghcr.io/daiyuhangsustc/dsh-cae`（首次使用自动拉取） |
 | `workdir` | `./cae` | 工件目录（相对 agent cwd），存放 STEP/MSH/INP/FRD/VTU/PNG 文件 |
 | `stageTimeoutMs` | `600000` | 每阶段墙钟预算（毫秒）；超时则终止阶段进程组 |
 | `openfoamBashrc` | 自动探测 | OpenFOAM `etc/bashrc` 路径；自动探测检查 `$FOAM_BASHRC`、`/opt/openfoam*/etc/bashrc`、`/usr/lib/openfoam/*/etc/bashrc` |
@@ -77,6 +85,7 @@ CFD 链路在 `cae_cfd_mesh` 处按 mm 接收几何（一次性换算为 m），
 若 `import build123d` 报 `pyexpat ... undefined symbol: XML_SetAllocTrackerActivationThreshold`，是被继承的 `LD_LIBRARY_PATH`（如 OpenFOAM 的 bashrc 把 `/usr/lib` 目录排在了前面）遮蔽了解释器自带的更新版 libexpat。对 conda 风格解释器（`python: auto` 或显式 env 路径），runner 在 spawn 时已自动把该环境的 `lib` 前置到 `LD_LIBRARY_PATH`、`bin` 前置到 `PATH`；其他布局请自行 `LD_PRELOAD=$CONDA_PREFIX/lib/libexpat.so.1` 强制优先加载新版。
 无显示器的 Linux 服务器需要 EGL 或 OSMesa 才能进行 PyVista 渲染 —— 推荐使用 conda 的 vtk，其构建支持 OSMesa：`conda install -c conda-forge vtk osmesa`；CI 设置 `PYVISTA_OFF_SCREEN=true`，此时 vtk 无需 X 即可离屏渲染。
 OpenFOAM 11+（Foundation）移除了独立求解器可执行文件：本插件运行 `foamRun`（`solver incompressibleFluid`），即 simpleFoam 的后继者；ESI 版本仍保留 `simpleFoam`，但此处调用的名称是 Foundation 的。`foamToVTK` 输出传统 `.vtk`，`cae_post_process` 直接读取。
+Docker 路线的报错都是显式的："Docker is not installed" → 安装 Docker；"daemon is not running" → `sudo systemctl start docker`；"failed to pull" → 按提示手动执行 `docker pull`。镜像过期表现得像依赖过期——`docker pull ghcr.io/daiyuhangsustc/dsh-cae:latest` 刷新即可。
 
 ## 限制
 
