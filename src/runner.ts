@@ -2,7 +2,9 @@ import { spawn } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import type { Config } from './config.js'
-import { INSTALL_HINTS, depsFailureMessage, pythonFor, stageEnv } from './interpreter.js'
+import {
+  INSTALL_HINTS, dockerArgv, dockerPreflight, dockerSpawnEnv, depsFailureMessage, pythonFor, runtimeFor, stageEnv,
+} from './interpreter.js'
 
 export { pythonDir } from './interpreter.js'
 
@@ -44,11 +46,18 @@ export async function runStage(
   const workdir = resolve(config.workdir)
   await mkdir(workdir, { recursive: true })
   const logPath = resolve(workdir, opts.logFile)
-  const python = pythonFor(config)
-  const proc = spawn(python, ['-m', `dsh_cae.${stage}`, ...args], {
+  const runtime = runtimeFor(config)
+  if (runtime.kind === 'docker') await dockerPreflight(runtime.image, config)
+  const argv = runtime.kind === 'docker'
+    ? dockerArgv(runtime.image, workdir, stage, args)
+    : [runtime.command, '-m', `dsh_cae.${stage}`, ...args]
+  const env = runtime.kind === 'docker'
+    ? dockerSpawnEnv(process.env)
+    : stageEnv(runtime.command, process.env)
+  const proc = spawn(argv[0], argv.slice(1), {
     cwd: workdir,
     detached: true,
-    env: stageEnv(python, process.env),
+    env,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 
