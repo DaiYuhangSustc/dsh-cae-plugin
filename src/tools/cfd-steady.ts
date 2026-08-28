@@ -2,6 +2,7 @@ import { join, resolve } from 'node:path'
 import { access, writeFile } from 'node:fs/promises'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { ensureDeps, runStage } from '../runner.js'
+import { runtimeFor } from '../interpreter.js'
 import type { Config } from '../config.js'
 
 const DESCRIPTION =
@@ -127,7 +128,11 @@ export function defineCaeCfdSteadyTool(config: Config) {
         await writeFile(ovrFile, JSON.stringify(args.overrides), 'utf8')
         argv.push('--overrides-file', ovrFile)
       }
-      if (config.openfoamBashrc) argv.push('--bashrc', config.openfoamBashrc)
+      // Host bashrc paths don't exist inside the container; the image's
+      // OpenFOAM is auto-detected (see runner.ts's identical guard).
+      if (config.openfoamBashrc && runtimeFor(config).kind !== 'docker') {
+        argv.push('--bashrc', config.openfoamBashrc)
+      }
       const { receipt } = await runStage(config, 'cfd_steady', argv,
         { signal: exec.signal, logFile: `cfd.${stem}.steady.log` })
       return receipt as unknown as CfdSteadyReceipt

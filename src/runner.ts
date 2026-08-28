@@ -131,14 +131,20 @@ export async function ensureDeps(
   depsOk.set(config, seen)
   if (seen.has(group)) return
   const argv = ['--group', group]
-  if (group === 'cfd' && config.openfoamBashrc) argv.push('--bashrc', config.openfoamBashrc)
+  // A host-side bashrc path cannot exist inside the container; the image ships
+  // OpenFOAM 13 and the Python side auto-detects /opt/openfoam13 there.
+  if (group === 'cfd' && config.openfoamBashrc && runtimeFor(config).kind !== 'docker') {
+    argv.push('--bashrc', config.openfoamBashrc)
+  }
   const { receipt } = await runStage(config, 'deps', argv, {
     signal, logFile: `deps.${group}.log`,
   }).catch((error: Error) => {
-    throw new Error(
-      `dsh-cae cannot start its Python stages with interpreter '${pythonFor(config)}': `
-      + `${error.message}\n${INSTALL_HINTS[group]}`,
-    )
+    const runtime = runtimeFor(config)
+    // Local install hints are noise for a docker user — the image is the fix.
+    throw new Error(runtime.kind === 'docker'
+      ? `dsh-cae cannot start its Python stages in image '${runtime.image}': ${error.message}`
+      : `dsh-cae cannot start its Python stages with interpreter '${pythonFor(config)}': `
+        + `${error.message}\n${INSTALL_HINTS[group]}`)
   })
   if (receipt.ok !== true) {
     throw new Error(depsFailureMessage(group, receipt))

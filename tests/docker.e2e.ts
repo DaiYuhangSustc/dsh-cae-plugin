@@ -12,7 +12,7 @@ import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runStage } from '../src/runner.ts'
+import { ensureDeps, runStage } from '../src/runner.ts'
 import type { Config } from '../src/config.ts'
 
 const enabled = process.env.DSH_CAE_DOCKER_E2E === '1'
@@ -37,5 +37,13 @@ describe.skipIf(!enabled)('docker runtime e2e', () => {
     expect(res.receipt).toEqual({ ok: true, value: 42 })
     const log = await readFile(join(work, 'fake.log'), 'utf8')
     expect(log).toContain('noise line before receipt')
+  })
+
+  it('drops a host openfoamBashrc instead of passing a container-nonexistent path', async () => {
+    // A host path in --bashrc would fail the in-container deps check with a
+    // misleading "install OpenFOAM locally" hint; the runner must drop it and
+    // let the image's own OpenFOAM be auto-detected.
+    const hostOnly: Config = { ...config, openfoamBashrc: '/nonexistent-host-etc-bashrc' }
+    await expect(ensureDeps(hostOnly, undefined, 'cfd')).resolves.toBeUndefined()
   })
 })

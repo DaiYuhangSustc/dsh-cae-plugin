@@ -1,5 +1,5 @@
 /** Interpreter resolution and spawn-environment sanitation for Python stages. */
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { accessSync, constants } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -169,13 +169,21 @@ export async function dockerPreflight(
       )
     }
     if (probe(['image', 'inspect', image]).status !== 0) {
-      const pull = probe(['pull', image])
-      if (pull.status !== 0) {
-        throw new Error(
-          `dsh-cae docker runtime: failed to pull ${image} — run \`docker pull ${image}\` manually\n`
-          + (pull.stderr || '').slice(-2000),
-        )
-      }
+      // Pull asynchronously: the plugin runs in-process, and a multi-GB
+      // first-use pull must not block the host event loop. The quick probes
+      // above stay sync deliberately (~100ms, once per process).
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn(bin, ['pull', image], { stdio: ['ignore', 'ignore', 'pipe'] })
+        let stderr = ''
+        proc.stderr?.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(-2000) })
+        proc.on('error', reject)
+        proc.on('close', (code) => {
+          if (code === 0) return resolve()
+          reject(new Error(
+            `dsh-cae docker runtime: failed to pull ${image} — run \`docker pull ${image}\` manually\n${stderr}`,
+          ))
+        })
+      })
     }
   })()
   preflightOk.set(config, check)

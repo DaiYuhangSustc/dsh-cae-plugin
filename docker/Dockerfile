@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # OpenFOAM Foundation 13 (official openfoam.org apt repo) -> /opt/openfoam13,
 # where the python-side bashrc auto-detection already looks.
 RUN wget -qO- https://dl.openfoam.org/gpg.key | gpg --dearmor > /etc/apt/trusted.gpg.d/openfoam.gpg \
-    && add-apt-repository -y "http://dl.openfoam.org/ubuntu" \
+    && add-apt-repository -y "https://dl.openfoam.org/ubuntu" \
     && apt-get update && apt-get install -y --no-install-recommends openfoam13 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -36,8 +36,10 @@ RUN wget -qO- https://dl.openfoam.org/gpg.key | gpg --dearmor > /etc/apt/trusted
 #  - vtk is pinned to 9.6.2: the pip wheel bundles vtkEGLRenderWindow (see
 #    VTK_DEFAULT_OPENGL_WINDOW below) — the headless route this image needs.
 ENV MAMBA_ROOT_PREFIX=/opt/mamba
-ENV MAMBA_DOWNLOAD_SPEED_LIMIT=0
-RUN curl -Ls --retry 5 --retry-delay 5 -o /tmp/micromamba.tar.bz2 \
+# MAMBA_DOWNLOAD_SPEED_LIMIT=0 (disable micromamba's download throttle) is
+# scoped to this RUN so it never leaks into the runtime environment.
+RUN MAMBA_DOWNLOAD_SPEED_LIMIT=0 \
+    curl -Ls --retry 5 --retry-delay 5 -o /tmp/micromamba.tar.bz2 \
       https://micro.mamba.pm/api/micromamba/linux-64/latest \
     && tar -xjf /tmp/micromamba.tar.bz2 -C /usr/local/bin --strip-components=1 bin/micromamba \
     && rm /tmp/micromamba.tar.bz2 \

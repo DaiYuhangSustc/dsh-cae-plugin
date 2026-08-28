@@ -83,9 +83,9 @@ CFD 链路在 `cae_cfd_mesh` 处按 mm 接收几何（一次性换算为 m），
 ## 故障排查
 
 若 `import build123d` 报 `pyexpat ... undefined symbol: XML_SetAllocTrackerActivationThreshold`，是被继承的 `LD_LIBRARY_PATH`（如 OpenFOAM 的 bashrc 把 `/usr/lib` 目录排在了前面）遮蔽了解释器自带的更新版 libexpat。对 conda 风格解释器（`python: auto` 或显式 env 路径），runner 在 spawn 时已自动把该环境的 `lib` 前置到 `LD_LIBRARY_PATH`、`bin` 前置到 `PATH`；其他布局请自行 `LD_PRELOAD=$CONDA_PREFIX/lib/libexpat.so.1` 强制优先加载新版。
-无显示器的 Linux 服务器需要 EGL 或 OSMesa 才能进行 PyVista 渲染 —— 推荐使用 conda 的 vtk，其构建支持 OSMesa：`conda install -c conda-forge vtk osmesa`；CI 设置 `PYVISTA_OFF_SCREEN=true`，此时 vtk 无需 X 即可离屏渲染。
+无显示器的 Linux 服务器需要 EGL 或 OSMesa 才能进行 PyVista 渲染 —— conda-forge 的 vtk 只带 X 窗口类（没有 EGL/OSMesa 构建），请改用 pip 轮子（`pip install 'vtk==9.6.2'`，自带 `vtkEGLRenderWindow`），并设置 `PYVISTA_OFF_SCREEN=true` 与 `VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow`；Docker 镜像内正是这么做的。
 OpenFOAM 11+（Foundation）移除了独立求解器可执行文件：本插件运行 `foamRun`（`solver incompressibleFluid`），即 simpleFoam 的后继者；ESI 版本仍保留 `simpleFoam`，但此处调用的名称是 Foundation 的。`foamToVTK` 输出传统 `.vtk`，`cae_post_process` 直接读取。
-Docker 路线的报错都是显式的："Docker is not installed" → 安装 Docker；"daemon is not running" → `sudo systemctl start docker`；"failed to pull" → 按提示手动执行 `docker pull`。镜像过期表现得像依赖过期——`docker pull ghcr.io/daiyuhangsustc/dsh-cae:latest` 刷新即可。
+Docker 路线的报错都是显式的："Docker is not installed" → 安装 Docker；"daemon is not running" → `sudo systemctl start docker`（若你通过 `DOCKER_HOST`/`DOCKER_CONTEXT` 使用 rootless/远程守护进程，请在启动 harness 的 shell 里导出这两个变量——runner 传给 `docker` CLI 的是最小化环境）；"failed to pull" → 按提示手动执行 `docker pull`。镜像过期表现得像依赖过期——`docker pull ghcr.io/daiyuhangsustc/dsh-cae:latest` 刷新即可。SELinux 强制模式的主机（Fedora/RHEL）可能拒绝阶段的 bind 挂载——阶段日志出现权限错误时检查 `container-selinux`。使用 `python: docker://…` 时请勿设置 `openfoamBashrc`：宿主机路径在容器内不存在，镜像自带的 OpenFOAM 会被自动使用。
 
 ## 限制
 

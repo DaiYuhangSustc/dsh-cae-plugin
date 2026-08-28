@@ -2,6 +2,7 @@ import { join, resolve } from 'node:path'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { ensureDeps, runStage } from '../runner.js'
+import { runtimeFor } from '../interpreter.js'
 import type { Config } from '../config.js'
 
 const DESCRIPTION =
@@ -91,7 +92,11 @@ export function defineCaeCfdMeshTool(config: Config) {
         await writeFile(dictFile, args.blockMeshDict, 'utf8')
         argv.push('--block-mesh-dict-file', dictFile)
       }
-      if (config.openfoamBashrc) argv.push('--bashrc', config.openfoamBashrc)
+      // Host bashrc paths don't exist inside the container; the image's
+      // OpenFOAM is auto-detected (see runner.ts's identical guard).
+      if (config.openfoamBashrc && runtimeFor(config).kind !== 'docker') {
+        argv.push('--bashrc', config.openfoamBashrc)
+      }
       const { receipt } = await runStage(config, 'cfd_mesh', argv,
         { signal: exec.signal, logFile: `cfd.${name}.mesh.log` })
       return receipt as unknown as CfdMeshReceipt
