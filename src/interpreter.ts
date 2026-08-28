@@ -10,6 +10,27 @@ export const AUTO_PYTHON = 'auto'
 /** Conda environment name a dsh-cae deployment is expected to live in. */
 const ENV_NAME = 'dsh-cae'
 
+/** Resolved execution runtime for a Python stage: local interpreter or container. */
+export type Runtime = { kind: 'local', command: string } | { kind: 'docker', image: string }
+
+/**
+ * Parse the `python` config value into a runtime. `docker://<image-ref>` selects
+ * the container runtime; anything else is a local interpreter command/path.
+ * @param python - the `python` config value.
+ * @returns local command or docker image reference to run stages with.
+ */
+export function parseRuntime(python: string): Runtime {
+  if (!python.startsWith('docker://')) return { kind: 'local', command: python }
+  const image = python.slice('docker://'.length).trim()
+  if (image === '') {
+    throw new Error(
+      "python: 'docker://' requires an image reference, "
+      + 'e.g. docker://ghcr.io/daiyuhangsustc/dsh-cae:latest',
+    )
+  }
+  return { kind: 'docker', image }
+}
+
 /**
  * Absolute path of the shipped `python/` directory. Resolves identically from
  * `src/` (tsx source launch) and `lib/` (built install) because both sit one
@@ -104,6 +125,17 @@ export function pythonFor(config: { python: string }): string {
     resolved.set(config, hit)
   }
   return hit.python
+}
+
+/**
+ * Resolve the stage runtime for a config object: docker stays as configured,
+ * local goes through the memoized interpreter resolution.
+ * @param config - deployment configuration.
+ * @returns runtime used by runStage.
+ */
+export function runtimeFor(config: { python: string }): Runtime {
+  const rt = parseRuntime(config.python)
+  return rt.kind === 'local' ? { kind: 'local', command: pythonFor(config) } : rt
 }
 
 /**

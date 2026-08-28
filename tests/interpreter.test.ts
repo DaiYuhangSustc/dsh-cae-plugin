@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import {
   defaultEnvCandidates,
   depsFailureMessage,
+  parseRuntime,
   pythonDir,
   resolvePython,
   stageEnv,
@@ -121,5 +122,22 @@ describe('depsFailureMessage', () => {
 
   it('routes the CFD hint for the cfd group', () => {
     expect(depsFailureMessage('cfd', { ok: false, missing: ['OpenFOAM bashrc'] })).toContain('openfoamBashrc')
+  })
+})
+
+describe('parseRuntime', () => {
+  it('passes any non-docker value through as a local command', () => {
+    expect(parseRuntime('python3')).toEqual({ kind: 'local', command: 'python3' })
+    expect(parseRuntime('/opt/envs/dsh-cae/bin/python'))
+      .toEqual({ kind: 'local', command: '/opt/envs/dsh-cae/bin/python' })
+  })
+
+  it('extracts the image from a docker:// value', () => {
+    expect(parseRuntime('docker://ghcr.io/daiyuhangsustc/dsh-cae:latest'))
+      .toEqual({ kind: 'docker', image: 'ghcr.io/daiyuhangsustc/dsh-cae:latest' })
+  })
+
+  it('rejects docker:// with an empty image and shows a config example', () => {
+    expect(() => parseRuntime('docker://')).toThrow(/image reference.*docker:\/\/ghcr\.io/)
   })
 })
