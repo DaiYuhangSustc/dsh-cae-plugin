@@ -15,9 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # OpenFOAM Foundation 13 (official openfoam.org apt repo) -> /opt/openfoam13,
-# where the python-side bashrc auto-detection already looks.
+# where the python-side bashrc auto-detection already looks. Repo URL stays
+# http: the .deb fetch redirects to a sourceforge http mirror, and apt refuses
+# the https→http downgrade; integrity is covered by the gpg-signed repo.
 RUN wget -qO- https://dl.openfoam.org/gpg.key | gpg --dearmor > /etc/apt/trusted.gpg.d/openfoam.gpg \
-    && add-apt-repository -y "https://dl.openfoam.org/ubuntu" \
+    && add-apt-repository -y "http://dl.openfoam.org/ubuntu" \
     && apt-get update && apt-get install -y --no-install-recommends openfoam13 \
     && rm -rf /var/lib/apt/lists/*
 
