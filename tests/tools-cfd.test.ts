@@ -81,7 +81,9 @@ describe('openfoamBashrc forwarding', () => {
   const steadyArgs = { inletVelocityMS: [0.02, 0, 0], kinematicViscosityM2S: 1e-6 } as const
 
   it('forwards --bashrc to cfd_mesh under the local runtime', async () => {
-    const tool = defineCaeCfdMeshTool({ ...config, openfoamBashrc: hostBashrc })
+    // Real tmp workdir: execute() mkdirs <workdir>/cfd even with runStage
+    // mocked, and './cae-stub' would pollute the repo root.
+    const tool = defineCaeCfdMeshTool({ ...config, workdir: await mkdtemp(join(tmpdir(), 'dsh-cae-bashrc-')), openfoamBashrc: hostBashrc })
     await tool.execute({ ...meshArgs }, exec())
     const runner = await runnerMod()
     const calls = vi.mocked(runner.runStage).mock.calls
@@ -92,7 +94,7 @@ describe('openfoamBashrc forwarding', () => {
   })
 
   it('drops --bashrc from cfd_mesh under the docker runtime', async () => {
-    const tool = defineCaeCfdMeshTool({ ...config, ...dockerConfig })
+    const tool = defineCaeCfdMeshTool({ ...config, ...dockerConfig, workdir: await mkdtemp(join(tmpdir(), 'dsh-cae-bashrc-')) })
     await tool.execute({ ...meshArgs }, exec())
     const runner = await runnerMod()
     const calls = vi.mocked(runner.runStage).mock.calls
