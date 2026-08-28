@@ -247,14 +247,22 @@ export function dockerArgv(image: string, workdir: string, stage: string, args: 
 }
 
 /**
- * Environment for the docker CLI process itself. Deliberately minimal: only
- * PATH passes. Host LD_LIBRARY_PATH & co. must never influence the container
- * (the drill-bit case spent hours on exactly that class of pollution).
+ * Environment for the docker CLI process itself. Deliberately minimal: PATH
+ * plus the daemon-endpoint selectors (DOCKER_HOST/DOCKER_CONTEXT) — the
+ * preflight probes inherit the full parent environment, so a rootless or
+ * remote daemon must be selectable for the run CLI too, or stages fail right
+ * after a successful preflight. Neither variable is forwarded into the
+ * container (-e never lists them). Host LD_LIBRARY_PATH & co. must never
+ * influence the container (the drill-bit case spent hours on exactly that
+ * class of pollution).
  * @param parent - environment to filter.
- * @returns environment containing only PATH.
+ * @returns environment containing only PATH and daemon-endpoint selectors.
  */
 export function dockerSpawnEnv(parent: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { PATH: parent.PATH }
+  const env: NodeJS.ProcessEnv = { PATH: parent.PATH }
+  if (parent.DOCKER_HOST) env.DOCKER_HOST = parent.DOCKER_HOST
+  if (parent.DOCKER_CONTEXT) env.DOCKER_CONTEXT = parent.DOCKER_CONTEXT
+  return env
 }
 
 /** Install hints per dependency group. */

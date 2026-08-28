@@ -173,4 +173,13 @@ describe('dockerSpawnEnv', () => {
     const env = dockerSpawnEnv({ PATH: '/usr/bin', LD_LIBRARY_PATH: '/opt/openfoam/evil', HOME: '/home/u' })
     expect(env).toEqual({ PATH: '/usr/bin' })
   })
+
+  it('forwards daemon-endpoint selectors so preflight and run agree', () => {
+    const env = dockerSpawnEnv({
+      PATH: '/usr/bin',
+      DOCKER_HOST: 'unix:///run/user/1000/docker.sock',
+      DOCKER_CONTEXT: 'rootless',
+    })
+    expect(env).toEqual({ PATH: '/usr/bin', DOCKER_HOST: 'unix:///run/user/1000/docker.sock', DOCKER_CONTEXT: 'rootless' })
+  })
 })

@@ -1,7 +1,7 @@
-import { mkdtemp, mkdir } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { defineCaeCfdMeshTool } from '../src/tools/cfd-mesh.ts'
 import { defineCaeCfdSteadyTool } from '../src/tools/cfd-steady.ts'
@@ -70,6 +70,18 @@ describe('openfoamBashrc forwarding', () => {
   // so mockReset ordering reads clearly.
   const runnerMod = async () => import('../src/runner.js')
 
+  const workdirs: string[] = []
+  // execute() mkdirs <workdir>/cfd even with runStage mocked — '/cae-stub'
+  // would pollute the repo root, so every test takes a tracked tmp dir.
+  const workdir = async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-cae-bashrc-'))
+    workdirs.push(dir)
+    return dir
+  }
+  afterAll(async () => {
+    await Promise.all(workdirs.map(d => rm(d, { recursive: true, force: true })))
+  })
+
   beforeEach(async () => {
     const runner = await runnerMod()
     vi.mocked(runner.runStage).mockReset()
@@ -83,7 +95,7 @@ describe('openfoamBashrc forwarding', () => {
   it('forwards --bashrc to cfd_mesh under the local runtime', async () => {
     // Real tmp workdir: execute() mkdirs <workdir>/cfd even with runStage
     // mocked, and './cae-stub' would pollute the repo root.
-    const tool = defineCaeCfdMeshTool({ ...config, workdir: await mkdtemp(join(tmpdir(), 'dsh-cae-bashrc-')), openfoamBashrc: hostBashrc })
+    const tool = defineCaeCfdMeshTool({ ...config, workdir: await workdir(), openfoamBashrc: hostBashrc })
     await tool.execute({ ...meshArgs }, exec())
     const runner = await runnerMod()
     const calls = vi.mocked(runner.runStage).mock.calls
@@ -94,7 +106,7 @@ describe('openfoamBashrc forwarding', () => {
   })
 
   it('drops --bashrc from cfd_mesh under the docker runtime', async () => {
-    const tool = defineCaeCfdMeshTool({ ...config, ...dockerConfig, workdir: await mkdtemp(join(tmpdir(), 'dsh-cae-bashrc-')) })
+    const tool = defineCaeCfdMeshTool({ ...config, ...dockerConfig, workdir: await workdir() })
     await tool.execute({ ...meshArgs }, exec())
     const runner = await runnerMod()
     const calls = vi.mocked(runner.runStage).mock.calls
@@ -104,7 +116,7 @@ describe('openfoamBashrc forwarding', () => {
   })
 
   it('drops --bashrc from cfd_steady under the docker runtime', async () => {
-    const work = await mkdtemp(join(tmpdir(), 'dsh-cae-bashrc-'))
+    const work = await workdir()
     const caseDir = join(work, 'cae', 'cfd', 'duct')
     await mkdir(caseDir, { recursive: true })
     const tool = defineCaeCfdSteadyTool({ ...config, ...dockerConfig, workdir: work })
