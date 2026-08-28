@@ -165,6 +165,45 @@ export function stageEnv(python: string, parent: NodeJS.ProcessEnv): NodeJS.Proc
   return env
 }
 
+/**
+ * Build the full `docker run` argv for one stage. The workdir is mounted
+ * same-path so receipt paths are identical on host and container; the plugin's
+ * own `python/` dir is mounted read-only so the image never ships `dsh_cae`.
+ * @param image - container image reference.
+ * @param workdir - absolute stage workdir (host == container path).
+ * @param stage - module path under `dsh_cae`, e.g. `'cad'`.
+ * @param args - CLI arguments forwarded after the module name.
+ * @returns complete argv (element 0 is `docker`).
+ */
+export function dockerArgv(image: string, workdir: string, stage: string, args: string[]): string[] {
+  if (process.platform === 'win32') {
+    throw new Error('dsh-cae docker runtime requires a POSIX host (the plugin is POSIX-only)')
+  }
+  const uid = process.getuid?.() ?? 1000
+  const gid = process.getgid?.() ?? 1000
+  return [
+    'docker', 'run', '--rm', '--init',
+    '-v', `${workdir}:${workdir}`,
+    '-v', `${pythonDir()}:/opt/dsh-cae/python:ro`,
+    '-w', workdir,
+    '-u', `${uid}:${gid}`,
+    '-e', 'HOME=/tmp',
+    '-e', 'PYTHONPATH=/opt/dsh-cae/python',
+    image, 'python', '-m', `dsh_cae.${stage}`, ...args,
+  ]
+}
+
+/**
+ * Environment for the docker CLI process itself. Deliberately minimal: only
+ * PATH passes. Host LD_LIBRARY_PATH & co. must never influence the container
+ * (the drill-bit case spent hours on exactly that class of pollution).
+ * @param parent - environment to filter.
+ * @returns environment containing only PATH.
+ */
+export function dockerSpawnEnv(parent: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return { PATH: parent.PATH }
+}
+
 /** Install hints per dependency group. */
 export const INSTALL_HINTS = {
   structural:

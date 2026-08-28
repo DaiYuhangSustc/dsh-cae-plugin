@@ -5,6 +5,8 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   defaultEnvCandidates,
+  dockerArgv,
+  dockerSpawnEnv,
   depsFailureMessage,
   parseRuntime,
   pythonDir,
@@ -139,5 +141,28 @@ describe('parseRuntime', () => {
 
   it('rejects docker:// with an empty image and shows a config example', () => {
     expect(() => parseRuntime('docker://')).toThrow(/image reference.*docker:\/\/ghcr\.io/)
+  })
+})
+
+describe('dockerArgv', () => {
+  it('builds a same-path-mount, read-only-plugin-mount docker run argv', () => {
+    const argv = dockerArgv('img:tag', '/tmp/w', 'fixtures.fake_stage', ['--mode', 'ok'])
+    expect(argv.slice(0, 3)).toEqual(['docker', 'run', '--rm'])
+    expect(argv).toContain('--init')
+    expect(argv).toContain('/tmp/w:/tmp/w')
+    expect(argv).toContain(`${pythonDir()}:/opt/dsh-cae/python:ro`)
+    const w = argv.indexOf('-w')
+    expect(argv[w + 1]).toBe('/tmp/w')
+    const u = argv.indexOf('-u')
+    expect(argv[u + 1]).toMatch(/^\d+:\d+$/)
+    expect(argv).toContain('img:tag')
+    expect(argv.slice(-5)).toEqual(['python', '-m', 'dsh_cae.fixtures.fake_stage', '--mode', 'ok'])
+  })
+})
+
+describe('dockerSpawnEnv', () => {
+  it('passes only PATH through to the docker CLI', () => {
+    const env = dockerSpawnEnv({ PATH: '/usr/bin', LD_LIBRARY_PATH: '/opt/openfoam/evil', HOME: '/home/u' })
+    expect(env).toEqual({ PATH: '/usr/bin' })
   })
 })
