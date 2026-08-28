@@ -1,4 +1,5 @@
 /** Interpreter resolution and spawn-environment sanitation for Python stages. */
+import { spawnSync } from 'node:child_process'
 import { accessSync, constants } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -136,6 +137,50 @@ export function pythonFor(config: { python: string }): string {
 export function runtimeFor(config: { python: string }): Runtime {
   const rt = parseRuntime(config.python)
   return rt.kind === 'local' ? { kind: 'local', command: pythonFor(config) } : rt
+}
+
+/** Preflight verdicts memoized per config; only successful probes are cached. */
+const preflightOk = new WeakMap<object, Promise<void>>()
+
+/**
+ * Verify docker is usable and the image exists locally, auto-pulling when it
+ * does not (pull is not bound by stageTimeoutMs — first-use experience).
+ * @param image - container image reference.
+ * @param config - deployment configuration (memoization key).
+ * @param opts - dockerBin override for tests.
+ */
+export async function dockerPreflight(
+  image: string,
+  config: object,
+  opts: { dockerBin?: string } = {},
+): Promise<void> {
+  const cached = preflightOk.get(config)
+  if (cached) return cached
+  const bin = opts.dockerBin ?? 'docker'
+  const probe = (args: string[]) => spawnSync(bin, args, { encoding: 'utf8' })
+  const check = (async () => {
+    if (probe(['--version']).error) {
+      throw new Error('dsh-cae docker runtime: Docker is not installed — https://docs.docker.com/get-docker/')
+    }
+    if (probe(['info']).status !== 0) {
+      throw new Error(
+        'dsh-cae docker runtime: Docker daemon is not running — start it '
+        + '(e.g. `sudo systemctl start docker`) and retry',
+      )
+    }
+    if (probe(['image', 'inspect', image]).status !== 0) {
+      const pull = probe(['pull', image])
+      if (pull.status !== 0) {
+        throw new Error(
+          `dsh-cae docker runtime: failed to pull ${image} — run \`docker pull ${image}\` manually\n`
+          + (pull.stderr || '').slice(-2000),
+        )
+      }
+    }
+  })()
+  preflightOk.set(config, check)
+  check.catch(() => preflightOk.delete(config)) // retry on next call after a failure
+  return check
 }
 
 /**

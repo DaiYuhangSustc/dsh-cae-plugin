@@ -7,6 +7,7 @@ import {
   defaultEnvCandidates,
   dockerArgv,
   dockerSpawnEnv,
+  dockerPreflight,
   depsFailureMessage,
   parseRuntime,
   pythonDir,
@@ -157,6 +158,13 @@ describe('dockerArgv', () => {
     expect(argv[u + 1]).toMatch(/^\d+:\d+$/)
     expect(argv).toContain('img:tag')
     expect(argv.slice(-5)).toEqual(['python', '-m', 'dsh_cae.fixtures.fake_stage', '--mode', 'ok'])
+  })
+})
+
+describe('dockerPreflight', () => {
+  it('reports Docker as not installed when the binary is missing', async () => {
+    await expect(dockerPreflight('img:tag', {}, { dockerBin: '/nonexistent/docker-bin' }))
+      .rejects.toThrow(/Docker is not installed.*docs\.docker\.com/)
   })
 })
 
