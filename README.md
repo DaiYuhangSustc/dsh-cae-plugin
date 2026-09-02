@@ -107,7 +107,7 @@ Docker route errors are explicit: "Docker is not installed" → install Docker; 
 
 ## Limitations
 
-Structural: linear static analysis only, tetrahedral meshes only; CFD: steady incompressible laminar internal flow only, block-hex meshes only; POSIX only; single-machine.
+Structural: linear static analysis only, tetrahedral meshes only; CFD: incompressible laminar internal flow only (steady or transient), block-hex meshes only; POSIX only; single-machine.
 
 ## Roadmap
 

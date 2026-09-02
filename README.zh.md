@@ -78,7 +78,7 @@ CFD 链路需要安装 OpenFOAM（Foundation v11–13 或 ESI）；其 `etc/bash
 | 3 求解 | `cae_solve_static`（CalculiX）· `cae_cfd_steady` / `cae_cfd_transient`（foamRun） |
 | 4 后处理 | `cae_post_process`（PyVista） |
 | 5 验证 | `cae_verify_mesh`（网格无关性，Richardson + GCI）；每次求解都附收敛回执 |
-| 6 确认 | 刻意留给人工 —— 插件刻意不提供模型验证：提供 receipt 数字与云图，与物理现实的对比由工程师完成 |
+| 6 确认 | 刻意留给人工 —— 插件不提供模型验证：提供 receipt 数字与云图，与物理现实的对比由工程师完成 |
 
 ## 信任边界
 
@@ -107,7 +107,7 @@ Docker 路线的报错都是显式的："Docker is not installed" → 安装 Doc
 
 ## 限制
 
-结构：仅线性静力分析、仅四面体网格；CFD：仅稳态不可压缩层流内流、仅六面体块网格；仅 POSIX；单机。
+结构：仅线性静力分析、仅四面体网格；CFD：仅不可压缩层流内流（稳态或瞬态）、仅六面体块网格；仅 POSIX；单机。
 
 ## 路线图
 
