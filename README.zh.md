@@ -18,7 +18,7 @@
 </div>
 
 DeepSeek Harness 的自然语言驱动 CAE 流水线：agent 接收一句自然语言的仿真请求，驱动完整的 CAD → 网格 → 求解 → 后处理链路，底层依托 build123d、Gmsh、CalculiX、OpenFOAM 与 PyVista。
-六个工具覆盖全链路 —— 几何构建、四面体网格划分、线性静力求解、结果提取与绘图，外加一条并行 CFD 链路（blockMesh → 稳态不可压缩求解 → 后处理）处理内流请求 —— 每个阶段结束后将回执（路径、体积、网格质量、场极值）反馈给模型。
+九个工具覆盖全链路 —— 几何构建（脚本建模或外部 STEP 导入）、四面体网格划分、线性静力求解、结果提取与绘图，外加一条 CFD 链路（blockMesh → 稳态/瞬态不可压缩求解 → 后处理）处理内流请求，以及自动化的网格无关性验证 —— 每个阶段结束后将回执（路径、体积、网格质量、场极值）反馈给模型。
 
 ## 安装
 
@@ -51,16 +51,34 @@ CFD 链路需要安装 OpenFOAM（Foundation v11–13 或 ESI）；其 `etc/bash
 见 [examples/cantilever.md](examples/cantilever.md)：一句中文即可生成一端固定、端部受载的悬臂梁，在粗细两档网格上求解，输出 von Mises 云图并做网格无关性验证。
 另见 [examples/duct-flow.md](examples/duct-flow.md)：一句中文即可生成层流管流解，并与 Shah–London 摩擦常数做验证。
 
-## 六个工具
+## 九个工具
 
 | 工具 | 输入 | 输出 |
 | --- | --- | --- |
+| `cae_step_import` | 外部 `.step` 路径（+ 可选面命名） | 校验/愈合后的 `.step` 路径、面清单（面积/质心），作为边界条件锚点 |
 | `cae_cad_build` | build123d `script`（定义 `part`，可选 `NAMED_FACES`）+ `name` | `.step` 路径、体积、包围盒、命名面及其面积/质心 |
 | `cae_mesh_generate` | `.step` 路径、`elementSizeMm`、`elementType`（`tet4`/`tet10`） | `.msh` 路径、节点/单元数、质量指标 |
 | `cae_solve_static` | `.msh` 路径、材料（`youngMPa`、`poisson`）、命名面上的载荷/边界条件 | `.frd`/`.vtu` 路径、求解日志尾部、反力摘要 |
 | `cae_post_process` | `.vtu`/`.frd` 路径、场/点/绘图查询 | 带位置的场极值、点值、云图 PNG 路径 |
 | `cae_cfd_mesh` | 管道 `lengthMm`/`widthMm`/`heightMm`/`cellSizeMm`（+ `wallGrading`、完整 `blockMeshDict` 文本、`name`） | `caseDir`（SI 包围盒、单元数、checkMesh 质量、`checksPassed`） |
 | `cae_cfd_steady` | `caseDir`、`inletVelocityMS`、`kinematicViscosityM2S`、`densityKgM3`、`iterations`、字典 `overrides` | 求解日志尾部、`converged` 与最终残差、VTK 路径 |
+| `cae_cfd_transient` | `caseDir`、`inletVelocityMS`、`kinematicViscosityM2S`、`densityKgM3`、时间控制（`deltaT`、`endTime`）、字典 `overrides` | 求解日志尾部、时间步历史、VTK 路径（Euler/PIMPLE） |
+| `cae_verify_mesh` | 求解结果 + 网格加密方案 | 网格无关性研究：各加密档的观测阶数（Richardson）+ GCI、推荐结论 |
+
+`cae_cfd_steady` 与 `cae_cfd_transient` 的取舍：内流请求默认推荐稳态；瞬态分支（Euler/PIMPLE）面向真正依赖时间的物理 —— 稳态 vs 瞬态的权衡写在工具描述里，由 agent 推荐、用户决定。
+
+## 六阶段工作流映射
+
+本插件覆盖经典的 CAE/CFD 六阶段工作流；阶段 1–5 自动化，阶段 6 刻意留给人工。
+
+| Fluent 阶段 | dsh-cae 覆盖 |
+| --- | --- |
+| 1 前处理 | `cae_cad_build`（脚本几何）· `cae_step_import`（外部 STEP：校验/愈合/命名面）· `cae_mesh_generate` / `cae_cfd_mesh` |
+| 2 求解器设置 | 各求解工具的参数（材料、边界条件、ν）；稳态 vs 瞬态由 agent 推荐、用户决定 |
+| 3 求解 | `cae_solve_static`（CalculiX）· `cae_cfd_steady` / `cae_cfd_transient`（foamRun） |
+| 4 后处理 | `cae_post_process`（PyVista） |
+| 5 验证 | `cae_verify_mesh`（网格无关性，Richardson + GCI）；每次求解都附收敛回执 |
+| 6 确认 | 刻意留给人工 —— 插件刻意不提供模型验证：提供 receipt 数字与云图，与物理现实的对比由工程师完成 |
 
 ## 信任边界
 

@@ -18,7 +18,7 @@
 </div>
 
 Natural-language-driven CAE pipeline for DeepSeek Harness: the agent takes a plain-language simulation request and drives a complete CAD → mesh → solve → post-process chain over build123d, Gmsh, CalculiX, OpenFOAM, and PyVista.
-Six tools cover the chain end to end — geometry construction, tetrahedral meshing, linear static solving, result extraction/plotting, and a parallel CFD chain (blockMesh → steady incompressible solve → post) for internal-flow requests — with receipts (paths, volumes, mesh quality, field extremes) fed back to the model after every stage.
+Nine tools cover the chain end to end — geometry construction (scripted or external STEP import), tetrahedral meshing, linear static solving, result extraction/plotting, a CFD chain (blockMesh → steady or transient incompressible solve → post) for internal-flow requests, and automated mesh-independence verification — with receipts (paths, volumes, mesh quality, field extremes) fed back to the model after every stage.
 
 ## Install
 
@@ -51,16 +51,34 @@ A surface started before the plugin was added cannot see it — restart the surf
 See [examples/cantilever.md](examples/cantilever.md): a single Chinese sentence produces a fixed-end cantilever under tip load, solved on coarse and refined meshes with a von Mises contour and a mesh-independence check.
 And [examples/duct-flow.md](examples/duct-flow.md): one Chinese sentence produces a laminar duct-flow solution validated against the Shah–London friction constant.
 
-## The six tools
+## The nine tools
 
 | Tool | Input | Output |
 | --- | --- | --- |
+| `cae_step_import` | external `.step` path (+ optional face naming) | validated/healed `.step` path, face table with areas/centroids for BC anchors |
 | `cae_cad_build` | build123d `script` (defines `part`, optional `NAMED_FACES`) + `name` | `.step` path, volume, bounding box, named faces with areas/centroids |
 | `cae_mesh_generate` | `.step` path, `elementSizeMm`, `elementType` (`tet4`/`tet10`) | `.msh` path, node/element counts, quality metrics |
 | `cae_solve_static` | `.msh` path, material (`youngMPa`, `poisson`), loads/boundary conditions on named faces | `.frd`/`.vtu` paths, solver log tail, reaction summary |
 | `cae_post_process` | `.vtu`/`.frd` path, field/point/plot queries | field extremes with locations, point values, contour PNG paths |
 | `cae_cfd_mesh` | duct `lengthMm`/`widthMm`/`heightMm`/`cellSizeMm` (+ `wallGrading`, full `blockMeshDict` text, `name`) | `caseDir` (SI bounds, cell count, checkMesh quality, `checksPassed`) |
 | `cae_cfd_steady` | `caseDir`, `inletVelocityMS`, `kinematicViscosityM2S`, `densityKgM3`, `iterations`, dict `overrides` | solver log tail, `converged` + final residuals, VTK path |
+| `cae_cfd_transient` | `caseDir`, `inletVelocityMS`, `kinematicViscosityM2S`, `densityKgM3`, time controls (`deltaT`, `endTime`), dict `overrides` | solver log tail, time-step history, VTK path (Euler/PIMPLE) |
+| `cae_verify_mesh` | solve result + mesh refinement schedule | mesh-independence study: observed order (Richardson) + GCI per level, recommendation |
+
+`cae_cfd_steady` vs `cae_cfd_transient`: steady is the default recommendation for internal-flow requests; the transient branch (Euler/PIMPLE) is for genuinely time-dependent physics — the steady-vs-transient trade-off is spelled out in the tool descriptions for the agent to recommend and the user to decide.
+
+## Six-stage workflow mapping
+
+The plugin covers the classic CFD/CAE six-stage workflow; stages 1–5 are automated, stage 6 is deliberately human.
+
+| Fluent stage | dsh-cae coverage |
+| --- | --- |
+| 1 Pre-processing | `cae_cad_build` (script geometry) · `cae_step_import` (external STEP: validate/heal/name faces) · `cae_mesh_generate` / `cae_cfd_mesh` |
+| 2 Solver setup | parameters of the solve tools (materials, BCs, ν); steady vs transient is a recommendation the agent makes, the user decides |
+| 3 Solution | `cae_solve_static` (CalculiX) · `cae_cfd_steady` / `cae_cfd_transient` (foamRun) |
+| 4 Post-processing | `cae_post_process` (PyVista) |
+| 5 Verification | `cae_verify_mesh` (mesh independence, Richardson + GCI); convergence receipts on every solve |
+| 6 Validation | deliberately human — the plugin provides the numbers and plots, the engineer compares against reality |
 
 ## Trust boundary
 

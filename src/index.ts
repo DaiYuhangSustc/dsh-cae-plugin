@@ -22,7 +22,7 @@ export const inject = ['tools']
 export { Config } from './config.js'
 
 /**
- * Register the six CAE stage tools (structural + CFD chains) on the tool registry.
+ * Register the nine CAE stage tools (structural + CFD chains) on the tool registry.
  * @param ctx - registrant context carrying the tool registry.
  * @param config - deployment configuration.
  */
