@@ -8,12 +8,12 @@ const registered: unknown[] = []
 const ctx = { tools: { register: (t: unknown) => registered.push(t) } } as never
 
 describe('plugin wiring', () => {
-  it('apply registers exactly the eight CAE tools in name order', () => {
+  it('apply registers exactly the nine CAE tools in name order', () => {
     apply(ctx, { python: 'python3', workdir: './cae', stageTimeoutMs: 1000 })
     const names = registered.map(t => (t as { name: string }).name).sort()
     expect(names).toEqual([
       'cae_cad_build', 'cae_cfd_mesh', 'cae_cfd_steady', 'cae_cfd_transient', 'cae_mesh_generate',
-      'cae_post_process', 'cae_solve_static', 'cae_step_import',
+      'cae_post_process', 'cae_solve_static', 'cae_step_import', 'cae_verify_mesh',
     ])
   })
 })
