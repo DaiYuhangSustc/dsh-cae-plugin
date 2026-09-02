@@ -57,6 +57,27 @@ def test_mesh_counts_disconnected_components(stage, workdir, parse_receipt):
     assert any("disconnected" in w for w in receipt["warnings"])
 
 
+def test_mesh_tolerates_absent_faces_sidecar(stage, workdir, parse_receipt):
+    # The TS tool layer always passes --faces-json, but cad.py writes the
+    # sidecar only when the script defined NAMED_FACES — geometry from a
+    # first CAD pass (unnamed faces) must still mesh (regression: this
+    # exact path failed CI's tools-cad-mesh real-kernel test).
+    script = workdir / "plain.cad.py"
+    script.write_text("from build123d import Box\npart = Box(100, 20, 5)\n")
+    step = workdir / "plain.step"
+    faces = workdir / "plain.faces.json"
+    proc = stage(workdir, "cad", "--script-file", str(script),
+                 "--step", str(step), "--faces-json", str(faces))
+    assert "<<<DSH_CAE_JSON>>>" in proc.stdout
+    assert not faces.exists()
+    msh = workdir / "plain.msh"
+    proc = stage(workdir, "mesh", "--step", str(step), "--faces-json", str(faces),
+                 "--msh", str(msh), "--element-size", "4.0")
+    receipt = parse_receipt(proc)
+    assert msh.exists()
+    assert receipt["groupNames"] == ["solid"]
+
+
 def test_mesh_fails_loud_when_no_face_matches(stage, workdir):
     step, _ = _build(workdir, stage)
     bad = workdir / "bad.faces.json"

@@ -3,6 +3,7 @@
 import argparse
 import json
 import math
+import os
 
 from dsh_cae.receipt import emit, fail
 
@@ -24,7 +25,11 @@ def main() -> None:
         fail(f"gmsh is not installed in this interpreter: {exc}")
 
     sidecar = {}
-    if args.faces_json:
+    # cad.py writes the sidecar only when the script defined NAMED_FACES —
+    # an absent file means "no named faces to rebuild", not an error. The TS
+    # tool layer always passes --faces-json, so geometry built without named
+    # faces (the common first CAD pass) lands here.
+    if args.faces_json and os.path.exists(args.faces_json):
         with open(args.faces_json, encoding="utf-8") as handle:
             sidecar = json.load(handle)
 
