@@ -13,6 +13,7 @@ import { defineCaeSolveTool } from './tools/solve.js'
 import { defineCaePostTool } from './tools/post.js'
 import { defineCaeCfdMeshTool } from './tools/cfd-mesh.js'
 import { defineCaeCfdSteadyTool } from './tools/cfd-steady.js'
+import { defineCaeCfdTransientTool } from './tools/cfd-transient.js'
 
 export const name = 'dsh-cae'
 export const inject = ['tools']
@@ -32,4 +33,5 @@ export function apply(ctx: Context, config: Config): void {
   ctx.tools.register(defineCaePostTool(config))
   ctx.tools.register(defineCaeCfdMeshTool(config))
   ctx.tools.register(defineCaeCfdSteadyTool(config))
+  ctx.tools.register(defineCaeCfdTransientTool(config))
 }
