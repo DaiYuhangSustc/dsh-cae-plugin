@@ -133,6 +133,16 @@ def test_name_faces_rejects_unknown_id(stage, workdir):
     assert "faceId 99" in proc.stderr
 
 
+def test_name_faces_rejects_non_ascii_name(stage, workdir):
+    # '固定'.isalnum() 为 True，但物理组名必须是 ASCII 字母数字/下划线
+    step = workdir / "box.step"
+    export_step(Box(20, 10, 10), str(step))
+    proc = stage(workdir, "step_import", "--step", str(step),
+                 "--name-faces", json.dumps([{"faceId": 1, "name": "固定"}]))
+    assert proc.returncode == 1
+    assert "alphanumeric/underscore" in proc.stderr
+
+
 def test_fails_loud_on_missing_file(stage, workdir):
     proc = stage(workdir, "step_import", "--step", str(workdir / "nope.step"))
     assert proc.returncode == 1

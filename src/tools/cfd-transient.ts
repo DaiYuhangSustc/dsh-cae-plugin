@@ -56,7 +56,7 @@ export function defineCaeCfdTransientTool(config: Config) {
       endTimeS: { type: 'number', required: true, description: 'Simulated physical seconds to march.' },
       maxCourant: { type: 'number', description: 'Courant cap for the adaptive step. Default 0.5.' },
       deltaTS: { type: 'number', description: 'Fixed time step in s; disables the Courant-limited adaptive step.' },
-      writeIntervalS: { type: 'number', description: 'Result write interval in simulated seconds. Default endTimeS/10.' },
+      writeIntervalS: { type: 'number', description: 'Result write interval in simulated seconds; must divide endTimeS evenly so the final time is written. Default endTimeS/10.' },
       densityKgM3: { type: 'number', description: 'Density kg/m³, echoed for cae_post_process. Default 1.' },
       overrides: {
         type: 'array',
@@ -115,6 +115,15 @@ export function defineCaeCfdTransientTool(config: Config) {
       const writeIntervalS = args.writeIntervalS ?? endTimeS / 10
       if (!(writeIntervalS > 0) || writeIntervalS > endTimeS) {
         throw new Error(`writeIntervalS must be in (0, endTimeS], got ${writeIntervalS}`)
+      }
+      // foamRun overshoots a non-divisor endTime (adjustableRunTime never lands
+      // on it) and the final state is never written — foamToVTK then converts an
+      // earlier time while the receipt still reports endTimeS.
+      const ratio = endTimeS / writeIntervalS
+      if (Math.abs(ratio - Math.round(ratio)) > 1e-9) {
+        throw new Error(
+          `writeIntervalS ${writeIntervalS} does not divide endTimeS ${endTimeS} — `
+          + 'choose a writeIntervalS that divides endTimeS evenly so the final time is written')
       }
       const maxCourant = args.maxCourant ?? 0.5
       if (args.deltaTS === undefined && !(maxCourant > 0)) {

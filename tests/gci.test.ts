@@ -52,6 +52,30 @@ describe('gci', () => {
       .toThrow('at least 3')
   })
 
+  it('rejects divergence under refinement (monotone but wrong direction)', () => {
+    // 精确 φ = 100 − 1/h：h 减小 φ 增大远离 100 —— ε21、ε32 同号（被当作单调），
+    // 但观察阶数为负（应力奇异点的典型行为），GCI 公式会给负值，必须拒绝。
+    const mk = (n: number): GciLevel => ({ size: 1 / Math.cbrt(n), count: n, value: 100 - Math.cbrt(n) })
+    const result = gci([mk(27000), mk(8000), mk(8000 / 3.375)], 3)
+    expect(result.convergenceState).toBe('oscillatory')
+    expect(result.observedOrder).toBeNull()
+    expect(result.gciFinePercent).toBeNull()
+    expect(result.gciCoarsePercent).toBeNull()
+    expect(result.meshIndependent).toBe(false)
+  })
+
+  it('never reports mesh-independent when counts invert (r21 < 1)', () => {
+    // 尺寸减小时单元数反而减少 → r21 < 1 → p ≤ 0 guard 必须拦住
+    const levels: GciLevel[] = [
+      { size: 1, count: 1000, value: 100.5 },
+      { size: 2, count: 2000, value: 100.2 },
+      { size: 3, count: 4000, value: 100.1 },
+    ]
+    const result = gci(levels, 100)
+    expect(result.meshIndependent).toBe(false)
+    expect(result.gciFinePercent === null || result.gciFinePercent >= 0).toBe(true)
+  })
+
   it('accepts unsorted input (finest may come last)', () => {
     const sorted = manufactured(3)
     const result = gci([...sorted].reverse(), 3)

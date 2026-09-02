@@ -95,6 +95,30 @@ describe('cae_verify_mesh validation', () => {
     await expect(tool.execute({ ...structuralArgs, loads: [] }, exec()))
       .rejects.toThrow('at least one load')
   })
+
+  it('rejects a cfd-only metric on the structural chain', async () => {
+    const tool = defineCaeVerifyMeshTool({ ...config, workdir: await workdir() })
+    await expect(tool.execute({ ...structuralArgs, metric: 'pressureDropPa' }, exec()))
+      .rejects.toThrow('not available on chain=structural')
+  })
+
+  it('rejects a structural-only metric on the cfd chain', async () => {
+    const tool = defineCaeVerifyMeshTool({ ...config, workdir: await workdir() })
+    await expect(tool.execute({
+      chain: 'cfd', lengthMm: 1000, widthMm: 20, heightMm: 20,
+      inletVelocityMS: [0.02, 0, 0], kinematicViscosityM2S: 1e-6, cellSizesMm: [8, 5, 3],
+      densityKgM3: 1000, metric: 'maxVonMises',
+    }, exec())).rejects.toThrow('not available on chain=cfd')
+  })
+
+  it('requires densityKgM3 when metric is pressureDropPa', async () => {
+    const tool = defineCaeVerifyMeshTool({ ...config, workdir: await workdir() })
+    await expect(tool.execute({
+      chain: 'cfd', lengthMm: 1000, widthMm: 20, heightMm: 20,
+      inletVelocityMS: [0.02, 0, 0], kinematicViscosityM2S: 1e-6, cellSizesMm: [8, 5, 3],
+      metric: 'pressureDropPa',
+    }, exec())).rejects.toThrow('requires densityKgM3')
+  })
 })
 
 describe('cae_verify_mesh structural chain', () => {

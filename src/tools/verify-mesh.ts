@@ -148,6 +148,16 @@ export function defineCaeVerifyMeshTool(config: Config) {
         }
       }
       const metric = args.metric ?? (isStructural ? 'maxVonMises' : 'maxVelocityMS')
+      // 链/指标组合必须匹配，否则静默测错量纲（结构链测压降、CFD 链测应力）
+      if (isStructural && metric !== 'maxVonMises' && metric !== 'maxDisplacement') {
+        throw new Error(`metric '${metric}' is not available on chain=structural — use maxVonMises or maxDisplacement`)
+      }
+      if (!isStructural && metric !== 'maxVelocityMS' && metric !== 'pressureDropPa') {
+        throw new Error(`metric '${metric}' is not available on chain=cfd — use maxVelocityMS or pressureDropPa`)
+      }
+      if (metric === 'pressureDropPa' && typeof args.densityKgM3 !== 'number') {
+        throw new Error('metric pressureDropPa requires densityKgM3 — without it the kinematic-pressure difference is off by a factor of ρ')
+      }
       const threshold = args.gciThresholdPercent ?? 3
       const workdirAbs = resolve(config.workdir)
       await ensureDeps(config, exec.signal, isStructural ? 'structural' : 'cfd')

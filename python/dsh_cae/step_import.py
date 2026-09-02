@@ -201,7 +201,7 @@ def main() -> None:
             if fid not in by_id:
                 fail(f"nameFaces references faceId {fid}, but the output geometry "
                      f"has faces 1..{len(entries)}")
-            if not name or not name.replace("_", "a").isalnum():
+            if not name or not name.isascii() or not name.replace("_", "a").isalnum():
                 fail(f"face name '{name}' must be alphanumeric/underscore")
             if name in names:
                 fail(f"nameFaces reuses name '{name}'; names must be unique")

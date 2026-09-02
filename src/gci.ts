@@ -55,6 +55,20 @@ export function gci(levelsIn: GciLevel[], thresholdPercent: number): GciResult {
     }
   }
   const p = solveOrder(r21, r32, e21, e32)
+  // Negative/zero observed order (divergence under refinement — e.g. stress
+  // singularities at sharp re-entrant corners) makes r^p − 1 ≤ 0 and the GCI
+  // formula go negative: the numbers cannot be trusted, same as oscillatory.
+  if (!(p > 0) || !(r21 ** p - 1 > 0)) {
+    return {
+      ...base,
+      convergenceState: 'oscillatory',
+      observedOrder: null,
+      richardsonExtrapolated: null,
+      gciFinePercent: null,
+      gciCoarsePercent: null,
+      meshIndependent: false,
+    }
+  }
   const richardsonExtrapolated = l1.value - e21 / (r21 ** p - 1)
   const gciFinePercent = 1.25 * Math.abs(e21) / (Math.abs(l1.value) * (r21 ** p - 1)) * 100
   const gciCoarsePercent = 1.25 * Math.abs(e32) / (Math.abs(l2.value) * (r32 ** p - 1)) * 100
@@ -65,7 +79,8 @@ export function gci(levelsIn: GciLevel[], thresholdPercent: number): GciResult {
     richardsonExtrapolated,
     gciFinePercent,
     gciCoarsePercent,
-    meshIndependent: gciFinePercent <= thresholdPercent,
+    meshIndependent:
+      Number.isFinite(gciFinePercent) && gciFinePercent >= 0 && gciFinePercent <= thresholdPercent,
   }
 }
 

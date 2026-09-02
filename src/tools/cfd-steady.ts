@@ -10,8 +10,11 @@ const DESCRIPTION =
   + 'SI units: velocity m/s, kinematic viscosity m²/s, density kg/m³. A converged=false result is '
   + 'a normal outcome: raise iterations or override system/fvSolution\'s SIMPLE block (e.g. looser '
   + 'residualControl) and retry; exitCode!=0 carries logTail for diagnosis. densityKgM3 is echoed — '
-  + 'pass the same value to cae_post_process so kinematic pressure converts to Pa. overrides replace '
-  + 'top-level entries in whitelisted case dicts, exactly and only.'
+  + 'pass the same value to cae_post_process so kinematic pressure converts to Pa. '
+  + 'Choose steady when only fully-developed/time-averaged quantities matter — it is far '
+  + 'cheaper; for startup transients, vortex shedding, or any time-history dependence see '
+  + 'cae_cfd_transient — and recommend the choice to the user, the decision is theirs. '
+  + 'overrides replace top-level entries in whitelisted case dicts, exactly and only.'
 
 const OVERRIDE_FILES = [
   'system/controlDict', 'system/fvSchemes', 'system/fvSolution',

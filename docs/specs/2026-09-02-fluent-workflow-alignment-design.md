@@ -128,3 +128,13 @@ README/README.zh 工作流表加一行：阶段 6 是人为判断，插件提供
 
 - README/README.zh：工具表 + 六阶段映射表更新（含"阶段 6 人工"说明）
 - Dockerfile 不动；v0.4.0 tag 重出镜像（CI 门禁层自动跑全套 pytest）
+
+## 落地修订 (2026-09-02)
+
+实现与终审阶段相对本设计稿的收窄与增补，记录在案：
+
+1. **F1 自由边/非流形检查简化**：以布尔 `freeEdges` 回传（无逐边明细、无独立的非流形边检查项）——修复决策只需要"有没有"，布尔足够。
+2. **F1 `repairedDelta` 收窄**：只回传 `facesBefore/facesAfter/mergeableFacesRemaining` 三项，而非修复前后全部检查项计数对比。
+3. **F2 新增校验**：`endTimeS / writeIntervalS` 必须整除（TS 工具层 fail loud）——foamRun 对非整除的 endTime 会过冲且永不写出最终时刻，后处理会拿到偏早的状态。
+4. **F3 新增校验**：按链限制 metric（structural 只允许 maxVonMises/maxDisplacement，cfd 只允许 maxVelocityMS/pressureDropPa），且 `pressureDropPa` 强制要求 `densityKgM3`——否则运动压力差静默错 ρ 倍。
+5. **GCI 发散防护**：单调但发散的序列（观察阶数 p ≤ 0，如应力奇异的 von Mises）按不可信处理，与振荡收敛同路返回，绝不让负 GCI 通过独立性判定。

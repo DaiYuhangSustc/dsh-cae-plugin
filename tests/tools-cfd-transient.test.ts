@@ -53,6 +53,24 @@ describe('cae_cfd_transient validation', () => {
       .rejects.toThrow('writeIntervalS must be in (0, endTimeS]')
   })
 
+  it('rejects a writeIntervalS that does not divide endTimeS evenly', async () => {
+    const tool = defineCaeCfdTransientTool(config)
+    await expect(tool.execute({ ...base, caseDir: './c', endTimeS: 1, writeIntervalS: 0.3 }, exec()))
+      .rejects.toThrow('does not divide endTimeS')
+  })
+
+  it('accepts a writeIntervalS that divides endTimeS evenly', async () => {
+    const work = await workdir()
+    const caseDir = join(work, 'cfd', 'duct')
+    await mkdir(caseDir, { recursive: true })
+    const tool = defineCaeCfdTransientTool({ ...config, workdir: work })
+    await tool.execute({ ...base, caseDir, endTimeS: 1, writeIntervalS: 0.25 }, exec())
+    const runner = await runnerMod()
+    const call = vi.mocked(runner.runStage).mock.calls.find(([, stage]) => stage === 'cfd_transient')
+    expect(call).toBeDefined()
+    expect(call![2][call![2].indexOf('--write-interval-s') + 1]).toBe('0.25')
+  })
+
   it('rejects maxCourant <= 0 when deltaTS is not fixing the step', async () => {
     const tool = defineCaeCfdTransientTool(config)
     await expect(tool.execute({ ...base, caseDir: './c', endTimeS: 1, maxCourant: 0 }, exec()))
