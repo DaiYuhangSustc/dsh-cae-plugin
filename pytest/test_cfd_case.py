@@ -221,3 +221,39 @@ def test_tail40_caps_lines_and_bytes():
     out = cfd_case.tail40(text)
     assert out.splitlines()[0] == "line60"
     assert len(out) <= 8192
+
+
+def test_parse_transient_log_counts_steps_time_and_courant():
+    log = "\n".join([
+        "Courant Number mean: 0.213448 max: 0.419715",
+        "deltaT 0.000408591",
+        "smoothSolver:  Solving for Ux, Initial residual = 0.001, Final residual = 1e-07, No Iterations 1",
+        "Time = 0.00122654",
+        "Courant Number mean: 0.213481 max: 0.419794",
+        "Time = 0.00163513",
+        "Courant Number mean: 0.220000 max: 0.500000",
+        "Time = 0.00204",
+    ])
+    parsed = cfd_case.parse_transient_log(log)
+    assert parsed["timeStepsRun"] == 3
+    assert parsed["simTimeS"] == pytest.approx(0.00204)
+    assert parsed["maxCourantSeen"] == pytest.approx(0.5)
+    assert cfd_case.parse_transient_log("") == {"timeStepsRun": 0, "simTimeS": 0.0, "maxCourantSeen": None}
+
+
+def test_write_control_dict_transient_adaptive_and_fixed(tmp_path):
+    import pathlib
+    d = pathlib.Path(tmp_path)
+    cfd_case.write_control_dict_transient(d, 2.0, None, 0.5, 0.1)
+    text = (d / "system" / "controlDict").read_text()
+    assert "endTime         2;" in text
+    assert "adjustTimeStep  yes;" in text
+    assert "maxCo           0.5;" in text
+    assert "maxDeltaT       0.1;" in text
+    assert "writeControl    adjustableRunTime;" in text
+    assert "writeInterval   0.1;" in text
+    cfd_case.write_control_dict_transient(d, 2.0, 0.001, None, 0.1)
+    text = (d / "system" / "controlDict").read_text()
+    assert "adjustTimeStep  no;" in text
+    assert "deltaT          0.001;" in text
+    assert "maxCo" not in text

@@ -417,3 +417,127 @@ def find_latest_vtk(case_dir: pathlib.Path) -> str | None:
 def tail40(text: str) -> str:
     """Last 40 lines capped at 8 KiB, matching the structural chain's log tails."""
     return "\n".join(text.strip().splitlines()[-40:])[-8192:]
+
+
+FV_SCHEMES_TRANSIENT = _foam_header("dictionary", "fvSchemes", "system") + """
+ddtSchemes
+{
+    default         Euler;
+}
+
+gradSchemes
+{
+    default         Gauss linear;
+}
+
+divSchemes
+{
+    default         none;
+    div(phi,U)      bounded Gauss linearUpwind grad(U);
+    div((nuEff*dev2(T(grad(U))))) Gauss linear;
+}
+
+laplacianSchemes
+{
+    default         Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+"""
+
+FV_SOLUTION_TRANSIENT = _foam_header("dictionary", "fvSolution", "system") + """
+solvers
+{
+    p
+    {
+        solver          GAMG;
+        tolerance       1e-06;
+        relTol          0.1;
+        smoother        GaussSeidel;
+    }
+
+    pFinal
+    {
+        $p;
+        relTol          0;
+    }
+
+    U
+    {
+        solver          smoothSolver;
+        smoother        symGaussSeidel;
+        tolerance       1e-05;
+        relTol          0.1;
+    }
+
+    UFinal
+    {
+        $U;
+        relTol          0;
+    }
+}
+
+PIMPLE
+{
+    momentumPredictor   yes;
+    nOuterCorrectors    1;
+    nCorrectors         2;
+    nNonOrthogonalCorrectors 1;
+}
+"""
+
+
+def write_control_dict_transient(case_dir: pathlib.Path, end_time_s: float,
+                                 delta_t_s: float | None, max_co: float,
+                                 write_interval_s: float) -> None:
+    """Transient controlDict: real physical seconds; Courant-limited adaptive
+    deltaT unless a fixed deltaT is given. purgeWrite 0 keeps history."""
+    if delta_t_s is not None:
+        stepping = f"adjustTimeStep  no;\ndeltaT          {delta_t_s:.6g};"
+    else:
+        stepping = ("adjustTimeStep  yes;\ndeltaT          1e-05;\n"
+                    f"maxCo           {max_co:.6g};\nmaxDeltaT       {write_interval_s:.6g};")
+    (case_dir / "system").mkdir(parents=True, exist_ok=True)
+    (case_dir / "system" / "controlDict").write_text(
+        _foam_header("dictionary", "controlDict", "system")
+        + f"""
+solver          incompressibleFluid;
+
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         {end_time_s:.6g};
+{stepping}
+
+writeControl    adjustableRunTime;
+writeInterval   {write_interval_s:.6g};
+
+purgeWrite      0;
+writeFormat     ascii;
+writePrecision  6;
+writeCompression off;
+timeFormat      general;
+timePrecision   6;
+runTimeModifiable true;
+""")
+
+
+def parse_transient_log(text: str) -> dict:
+    """Time-step count, final simulated seconds, and the max Courant number
+    seen (transient foamRun logs carry 'Courant Number mean: x max: y')."""
+    times = re.findall(r"^Time = ([0-9.eE+-]+)", text, re.M)
+    cours = [float(m) for m in
+             re.findall(r"Courant Number mean: [0-9.eE+-]+ max: ([0-9.eE+-]+)", text)]
+    return {
+        "timeStepsRun": len(times),
+        "simTimeS": float(times[-1]) if times else 0.0,
+        "maxCourantSeen": max(cours) if cours else None,
+    }
